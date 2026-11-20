@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Libras Quest - Jogo Educativo em Libras</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- TELA 1: INÍCIO -->
+  <section id="screen-start" class="screen active">
+    <div class="card-container">
+      <h1>🤟 Libras Quest</h1>
+      <p class="subtitle">Aprenda o alfabeto manual em Libras de forma interativa</p>
+      
+      <div class="instructions-box">
+        <h3>Como Jogar</h3>
+        <ul>
+          <li><strong>Setas (↑ ↓ ← →) ou WASD:</strong> Movimente o personagem pela arena.</li>
+          <li><strong>Espaço:</strong> Pegue uma carta em Libras na parte inferior e coloque no espaço vazio abaixo da letra correspondente.</li>
+          <li><strong>Enter ou Botão Verificar:</strong> Confere a frase e soma seus pontos.</li>
+          <li><strong>Tempo:</strong> Você tem <strong>5 minutos</strong> para fazer a maior pontuação!</li>
+        </ul>
+      </div>
+
+      <p class="record-badge">🏆 Recorde Atual: <span id="start-highscore">0</span> pts</p>
+      <button id="btn-start" class="btn-primary">Iniciar Jogo</button>
+    </div>
+  </section>
+
+  <!-- TELA 2: JOGO -->
+  <section id="screen-game" class="screen">
+    <header class="hud-bar">
+      <div class="hud-item">⏱️ Tempo: <strong id="hud-timer">05:00</strong></div>
+      <div class="hud-item">⭐ Pontos: <strong id="hud-score">0</strong></div>
+      <div class="hud-item">📚 Frase: <strong id="hud-level">1</strong></div>
+      <div class="hud-item">🏆 Recorde: <strong id="hud-highscore">0</strong></div>
+    </header>
+
+    <main class="canvas-wrapper">
+      <canvas id="game-canvas" width="900" height="540"></canvas>
+    </main>
+
+    <footer class="controls-bar">
+      <span class="hint"><strong>Setas/WASD:</strong> Mover | <strong>Espaço:</strong> Pegar/Soltar Carta | <strong>Enter:</strong> Verificar</span>
+      <div class="action-buttons">
+        <button id="btn-verify" class="btn-success">Verificar Frase (Enter)</button>
+        <button id="btn-finish" class="btn-secondary">Encerrar Partida</button>
+      </div>
+    </footer>
+  </section>
+
+  <!-- TELA 3: FIM DE JOGO -->
+  <section id="screen-gameover" class="screen">
+    <div class="card-container">
+      <h1>⏱️ Tempo Esgotado!</h1>
+      <p class="subtitle">Confira o seu desempenho na partida:</p>
+
+      <div class="results-box">
+        <p>Pontuação Final: <strong id="final-score">0</strong> pts</p>
+        <p>Frases Completadas: <strong id="final-phrases">0</strong></p>
+        <p>Recorde Pessoal: <strong id="final-highscore">0</strong> pts</p>
+      </div>
+
+      <button id="btn-restart" class="btn-primary">Jogar Novamente</button>
+    </div>
+  </section>
+
+  <!-- Scripts na ordem MVC: Model -> View -> Controller -->
+  <script src="src/model.js"></script>
+  <script src="src/view.js"></script>
+  <script src="src/controller.js"></script>
+</body>
+</html>
