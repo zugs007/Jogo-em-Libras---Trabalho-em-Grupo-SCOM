@@ -4,37 +4,56 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Libras Quest - Jogo Educativo em Libras</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- Peças decorativas flutuantes no fundo -->
+  <div class="bg-tiles" aria-hidden="true">
+    <span class="floating-tile tile-yellow t1">L</span>
+    <span class="floating-tile tile-blue t2">I</span>
+    <span class="floating-tile tile-green t3">B</span>
+    <span class="floating-tile tile-yellow t4">R</span>
+    <span class="floating-tile tile-blue t5">A</span>
+    <span class="floating-tile tile-green t6">S</span>
+  </div>
+
   <!-- TELA 1: INÍCIO -->
   <section id="screen-start" class="screen active">
-    <div class="card-container">
-      <h1>🤟 Libras Quest</h1>
-      <p class="subtitle">Aprenda o alfabeto manual em Libras de forma interativa</p>
-      
+    <div class="game-logo">
+      <span class="logo-libras">LIBRAS</span>
+      <span class="logo-quest">QUEST</span>
+    </div>
+
+    <div class="casual-panel">
+      <div class="panel-header-pill">🤟 BEM-VINDO</div>
+      <p class="subtitle">Aprenda o alfabeto manual em Libras de forma interativa e inclusiva!</p>
+
       <div class="instructions-box">
         <h3>Como Jogar</h3>
         <ul>
-          <li><strong>Setas (↑ ↓ ← →) ou WASD:</strong> Movimente o personagem pela arena.</li>
-          <li><strong>Espaço:</strong> Pegue uma carta em Libras na parte inferior e coloque no espaço vazio abaixo da letra correspondente.</li>
-          <li><strong>Enter ou Botão Verificar:</strong> Confere a frase e soma seus pontos (quanto mais rápido acertar, maior o bônus!).</li>
-          <li><strong>Tempo:</strong> Você tem <strong>5 minutos</strong> para fazer a maior pontuação!</li>
+          <li><span class="key-badge">Setas / WASD</span> Movimente o personagem pela arena.</li>
+          <li><span class="key-badge">Espaço</span> Pegue uma carta em Libras no baralho e coloque abaixo da letra certa.</li>
+          <li><span class="key-badge">Enter</span> Confere a frase. Quanto mais rápido acertar, maior o bônus!</li>
+          <li><span class="key-badge">05:00</span> Faça a maior pontuação antes do tempo acabar.</li>
         </ul>
       </div>
 
-      <p class="record-badge">🏆 Recorde Atual: <span id="start-highscore">0</span> pts</p>
-      <button id="btn-start" class="btn-primary">Iniciar Jogo</button>
+      <div class="record-pill">🏆 Recorde Atual: <strong id="start-highscore">0</strong> pts</div>
+
+      <button id="btn-start" class="btn-3d btn-yellow btn-lg">▶ JOGAR AGORA</button>
     </div>
   </section>
 
   <!-- TELA 2: JOGO -->
   <section id="screen-game" class="screen">
     <header class="hud-bar">
-      <div class="hud-item">⏱️ Tempo: <strong id="hud-timer">05:00</strong></div>
-      <div class="hud-item">⭐ Pontos: <strong id="hud-score">0</strong></div>
-      <div class="hud-item">📚 Frase: <strong id="hud-level">1</strong></div>
-      <div class="hud-item">🏆 Recorde: <strong id="hud-highscore">0</strong></div>
+      <div class="hud-pill pill-blue">⏱️ <strong id="hud-timer">05:00</strong></div>
+      <div class="hud-pill pill-yellow">⭐ <strong id="hud-score">0</strong> pts</div>
+      <div class="hud-pill pill-blue">📚 Frase <strong id="hud-level">1</strong></div>
+      <div class="hud-pill pill-green">🏆 Recorde: <strong id="hud-highscore">0</strong></div>
     </header>
 
     <main class="canvas-wrapper">
@@ -42,29 +61,43 @@
     </main>
 
     <footer class="controls-bar">
-      <span class="hint"><strong>Setas/WASD:</strong> Mover | <strong>Espaço:</strong> Pegar/Soltar Carta | <strong>Enter:</strong> Verificar</span>
+      <span class="hint"><strong>Setas/WASD:</strong> Mover  |  <strong>Espaço:</strong> Pegar/Soltar  |  <strong>Enter:</strong> Verificar</span>
       <div class="action-buttons">
-        <button id="btn-verify" class="btn-success">Verificar Frase (Enter)</button>
-        <button id="btn-finish" class="btn-secondary">Encerrar Partida</button>
+        <button id="btn-verify" class="btn-3d btn-green">✔ Verificar Frase</button>
+        <button id="btn-finish" class="btn-3d btn-blue">Encerrar</button>
       </div>
     </footer>
   </section>
 
   <!-- TELA 3: FIM DE JOGO -->
   <section id="screen-gameover" class="screen">
-    <div class="card-container">
-      <h1>⏱️ Partida Encerrada!</h1>
-      <p class="subtitle">Confira o seu desempenho na partida:</p>
+    <div class="game-logo small-logo">
+      <span class="logo-libras">LIBRAS</span>
+      <span class="logo-quest">QUEST</span>
+    </div>
+
+    <div class="casual-panel">
+      <div class="panel-header-pill">⏱️ FIM DE PARTIDA</div>
+      <p class="subtitle">Confira o resultado do seu desafio em Libras:</p>
 
       <div class="results-box">
-        <p>Pontuação Final: <strong id="final-score">0</strong> pts</p>
-        <p>Frases Completadas: <strong id="final-phrases">0</strong></p>
-        <p>Recorde Pessoal: <strong id="final-highscore">0</strong> pts</p>
+        <div class="result-row">
+          <span>Pontuação Final</span>
+          <strong class="highlight-yellow"><span id="final-score">0</span> pts</strong>
+        </div>
+        <div class="result-row">
+          <span>Frases Completadas</span>
+          <strong class="highlight-blue"><span id="final-phrases">0</span></strong>
+        </div>
+        <div class="result-row">
+          <span>Recorde Pessoal</span>
+          <strong class="highlight-green"><span id="final-highscore">0</span> pts</strong>
+        </div>
       </div>
 
-      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-        <button id="btn-restart" class="btn-primary">Jogar Novamente</button>
-        <button id="btn-home" class="btn-secondary">Voltar ao Início</button>
+      <div class="gameover-actions">
+        <button id="btn-restart" class="btn-3d btn-green">↻ Jogar Novamente</button>
+        <button id="btn-home" class="btn-3d btn-blue">🏠 Voltar ao Início</button>
       </div>
     </div>
   </section>
