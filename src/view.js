@@ -25,6 +25,12 @@ class GameView {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, model.width, model.height);
 
+    if (model.isPaused) {
+      ctx.fillStyle = "#1e3a8a";
+      ctx.fillRect(0, 0, model.width, model.height);
+      return;
+    }   
+
     const highlightedSlot = model.player.carriedCard
       ? model.getClosestColliding(model.slots.filter((s) => !s.isSpace && !s.placedCard), 2)
       : null;

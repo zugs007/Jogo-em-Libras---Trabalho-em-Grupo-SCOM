@@ -37,6 +37,7 @@
           <li><span class="key-badge">Setas / WASD</span> Movimente o personagem pela arena.</li>
           <li><span class="key-badge">Espaço</span> Pegue uma carta em Libras no baralho e coloque abaixo da letra certa.</li>
           <li><span class="key-badge">Enter</span> Confere a frase. Quanto mais rápido acertar, maior o bônus!</li>
+          <li><span class="key-badge">Esc</span> Pausa a partida a qualquer momento.</li>
         </ul>
       </div>
 
@@ -73,12 +74,28 @@
 
     <main class="canvas-wrapper">
       <canvas id="game-canvas" width="900" height="540"></canvas>
+
+      <!-- COBERTURA DE PAUSE ANTI-TRAPAÇA -->
+      <div id="pause-overlay" class="pause-overlay hidden">
+        <div class="pause-modal">
+          <div class="panel-header-pill">⏸️ PAUSE</div>
+          <p class="pause-text">Jogo pausado! As letras e cartas ficam ocultas enquanto o tempo está parado.</p>
+          <div class="pause-actions">
+            <button id="btn-resume" class="btn-3d btn-green btn-lg">▶ CONTINUAR</button>
+            <div class="pause-secondary-actions">
+              <button id="btn-pause-restart" class="btn-3d btn-yellow">↻ Reiniciar</button>
+              <button id="btn-pause-home" class="btn-3d btn-orange">🏠 Início</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
 
     <footer class="controls-bar">
       <span class="hint"><strong>Setas/WASD:</strong> Mover  |  <strong>Espaço:</strong> Pegar/Soltar  |  <strong>Enter:</strong> Verificar</span>
       <div class="action-buttons">
         <button id="btn-verify" class="btn-3d btn-green">✔ Verificar Frase</button>
+        <button id="btn-pause" class="btn-3d btn-yellow">⏸️ Pausar</button>
         <button id="btn-finish" class="btn-3d btn-blue">Encerrar</button>
       </div>
     </footer>

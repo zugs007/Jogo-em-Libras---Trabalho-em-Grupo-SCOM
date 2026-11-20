@@ -52,6 +52,7 @@ class GameModel {
     this.phraseStartTime = 300;
     this.isGameOver = false;
     this.isChecking = false;
+    this.isPaused = false;
     this.feedbackMessage =
       this.difficulty === "easy"
         ? "Modo Fácil: passe sobre a carta para ver a letra e desvie da barreira!"
@@ -67,7 +68,6 @@ class GameModel {
       invulnFrames: 0
     };
 
-    // 1 obstáculo mais lento no Fácil; 2 obstáculos mais rápidos no Difícil
     this.obstacles =
       this.difficulty === "hard"
         ? [
@@ -81,7 +81,13 @@ class GameModel {
     this.slots = [];
     this.deckCards = [];
     this.loadPhrase(this.currentPhraseIndex);
-  }s
+  }
+
+  togglePause() {
+    if (this.isGameOver || this.isChecking) return this.isPaused;
+    this.isPaused = !this.isPaused;
+    return this.isPaused;
+  }
 
   loadPhrase(index) {
     if (index > 0 && index % this.shuffledPhrases.length === 0) {
@@ -164,7 +170,7 @@ class GameModel {
   }
 
   movePlayer(keys) {
-    if (this.isGameOver || this.isChecking) return;
+    if (this.isGameOver || this.isChecking || this.isPaused) return;
 
     if (keys["ArrowUp"] || keys["KeyW"]) this.player.y -= this.player.speed;
     if (keys["ArrowDown"] || keys["KeyS"]) this.player.y += this.player.speed;
@@ -183,7 +189,7 @@ class GameModel {
   }
 
   updateObstacles() {
-    if (this.isGameOver || this.isChecking || this.obstacles.length === 0) return;
+    if (this.isGameOver || this.isChecking || this.isPaused || this.obstacles.length === 0) return;
 
     if (this.player.invulnFrames > 0) {
       this.player.invulnFrames--;
@@ -205,17 +211,14 @@ class GameModel {
         obs.vx *= -1;
       }
 
-      // Colisão justa (-3px de tolerância para não punir de raspão)
       if (this.player.invulnFrames <= 0 && this.checkCollision(this.player, obs, -3)) {
-        this.player.invulnFrames = 45; // ~0,75s de proteção após o toque
+        this.player.invulnFrames = 45;
 
-        // Empurrão vertical afastando o personagem da barreira
         const pCenterY = this.player.y + this.player.height / 2;
         const oCenterY = obs.y + obs.height / 2;
         const pushDir = pCenterY < oCenterY ? -1 : 1;
         this.player.y = Math.max(minY, Math.min(maxY, this.player.y + pushDir * 28));
 
-        // Se estava carregando uma carta, ela cai de volta para o baralho
         if (this.player.carriedCard) {
           const card = this.player.carriedCard;
           card.x = card.homeX;
@@ -262,7 +265,7 @@ class GameModel {
   }
 
   interact() {
-    if (this.isGameOver || this.isChecking) return;
+    if (this.isGameOver || this.isChecking || this.isPaused) return;
 
     if (!this.player.carriedCard) {
       const availableCards = this.deckCards.filter((c) => !c.isPlaced);
@@ -311,7 +314,7 @@ class GameModel {
   }
 
   verifyPhrase(onNextPhraseCallback) {
-    if (this.isGameOver || this.isChecking) return;
+    if (this.isGameOver || this.isChecking || this.isPaused) return;
 
     const letterSlots = this.slots.filter((s) => !s.isSpace);
     const allFilled = letterSlots.every((s) => s.placedCard !== null);

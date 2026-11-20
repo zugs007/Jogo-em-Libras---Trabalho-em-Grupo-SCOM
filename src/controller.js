@@ -26,6 +26,13 @@ class GameController {
     document.getElementById("btn-restart").addEventListener("click", () => this.startGame());
     document.getElementById("btn-home").addEventListener("click", () => this.goHome());
     document.getElementById("btn-finish").addEventListener("click", () => this.endGame());
+
+    // Controles de Pause
+    document.getElementById("btn-pause").addEventListener("click", () => this.handleTogglePause());
+    document.getElementById("btn-resume").addEventListener("click", () => this.handleTogglePause());
+    document.getElementById("btn-pause-restart").addEventListener("click", () => this.startGame());
+    document.getElementById("btn-pause-home").addEventListener("click", () => this.goHome());
+
     document.getElementById("btn-verify").addEventListener("click", () => {
       this.model.verifyPhrase(() => this.updateHUD());
       this.updateHUD();
@@ -37,6 +44,14 @@ class GameController {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) {
         e.preventDefault();
       }
+
+      // Tecla ESC pausa/despausa quando estiver na tela do jogo
+      if (e.code === "Escape" && document.getElementById("screen-game").classList.contains("active")) {
+        this.handleTogglePause();
+        return;
+      }
+
+      if (this.model.isPaused) return;
 
       if (e.code === "Space") {
         this.model.interact();
@@ -51,18 +66,48 @@ class GameController {
     });
   }
 
+  handleTogglePause() {
+    const paused = this.model.togglePause();
+    const overlay = document.getElementById("pause-overlay");
+    const btnPause = document.getElementById("btn-pause");
+    const btnVerify = document.getElementById("btn-verify");
+
+    if (paused) {
+      overlay.classList.remove("hidden");
+      btnPause.textContent = "▶ Continuar";
+      btnVerify.disabled = true;
+      this.view.render(this.model);
+    } else {
+      overlay.classList.add("hidden");
+      btnPause.textContent = "⏸️ Pausar";
+      btnVerify.disabled = false;
+    }
+  }
+
+  syncPauseUI() {
+    document.getElementById("pause-overlay").classList.add("hidden");
+    document.getElementById("btn-pause").textContent = "⏸️ Pausar";
+    document.getElementById("btn-verify").disabled = false;
+  }
+
   switchScreen(screenId) {
     document.querySelectorAll(".screen").forEach((el) => el.classList.remove("active"));
     document.getElementById(screenId).classList.add("active");
   }
 
   goHome() {
+    this.model.isGameOver = true;
+    this.model.isPaused = false;
+    clearInterval(this.timerInterval);
+    cancelAnimationFrame(this.animationFrameId);
+    this.syncPauseUI();
     this.updateHUD();
     this.switchScreen("screen-start");
   }
 
   startGame() {
     this.model.resetGame();
+    this.syncPauseUI();
     this.updateHUD();
     this.switchScreen("screen-game");
 
@@ -70,6 +115,8 @@ class GameController {
     cancelAnimationFrame(this.animationFrameId);
 
     this.timerInterval = setInterval(() => {
+      if (this.model.isPaused) return;
+
       this.model.timeLeft--;
       this.updateHUD();
 
@@ -80,8 +127,10 @@ class GameController {
 
     const loop = () => {
       if (!this.model.isGameOver) {
-        this.model.movePlayer(this.keys);
-        this.model.updateObstacles();
+        if (!this.model.isPaused) {
+          this.model.movePlayer(this.keys);
+          this.model.updateObstacles();
+        }
         this.view.render(this.model);
         this.animationFrameId = requestAnimationFrame(loop);
       }
@@ -91,6 +140,8 @@ class GameController {
 
   endGame() {
     this.model.isGameOver = true;
+    this.model.isPaused = false;
+    this.syncPauseUI();
     clearInterval(this.timerInterval);
     cancelAnimationFrame(this.animationFrameId);
 

@@ -411,3 +411,74 @@ canvas {
   display: flex;
   gap: 10px;
 }
+
+/* Overlay e Modal de Pause (Anti-trapaça) */
+.canvas-wrapper {
+  position: relative;
+}
+
+.pause-overlay {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    #1e3a8a,
+    #1e3a8a 18px,
+    #1d4ed8 18px,
+    #1d4ed8 36px
+  );
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 20;
+  padding: 20px;
+}
+
+.pause-overlay.hidden {
+  display: none;
+}
+
+.pause-modal {
+  position: relative;
+  background: #fffbeb;
+  border: 6px solid #3b82f6;
+  outline: 3px solid #1e293b;
+  border-radius: 26px;
+  padding: 36px 28px 26px;
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 12px 0 #0f172a;
+}
+
+.pause-text {
+  color: #334155;
+  font-weight: 800;
+  font-size: 1rem;
+  margin-bottom: 22px;
+}
+
+.pause-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pause-secondary-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.pause-secondary-actions .btn-3d {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+}
+
+.btn-orange {
+  background: linear-gradient(180deg, #fb923c 0%, #f97316 100%);
+  color: #ffffff;
+  text-shadow: 0 2px 0 #c2410c;
+  box-shadow: 0 5px 0 #c2410c, 0 7px 0 #1e293b;
+}
