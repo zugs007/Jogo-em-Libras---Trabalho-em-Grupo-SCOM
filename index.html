@@ -37,13 +37,27 @@
           <li><span class="key-badge">Setas / WASD</span> Movimente o personagem pela arena.</li>
           <li><span class="key-badge">Espaço</span> Pegue uma carta em Libras no baralho e coloque abaixo da letra certa.</li>
           <li><span class="key-badge">Enter</span> Confere a frase. Quanto mais rápido acertar, maior o bônus!</li>
-          <li><span class="key-badge">05:00</span> Faça a maior pontuação antes do tempo acabar.</li>
         </ul>
+      </div>
+
+      <!-- Seletor de Dificuldade -->
+      <div class="difficulty-box">
+        <span class="difficulty-label">Escolha o Modo de Jogo:</span>
+        <div class="difficulty-buttons">
+          <button type="button" id="btn-mode-easy" class="mode-btn selected" data-mode="easy">
+            🟢 Fácil <small>(Mostra letra ao passar)</small>
+          </button>
+          <button type="button" id="btn-mode-hard" class="mode-btn" data-mode="hard">
+            🔥 Difícil <small>(Sem dica • 1.5x pts)</small>
+          </button>
+        </div>
       </div>
 
       <div class="record-pill">🏆 Recorde Atual: <strong id="start-highscore">0</strong> pts</div>
 
-      <button id="btn-start" class="btn-3d btn-yellow btn-lg">▶ JOGAR AGORA</button>
+      <div>
+        <button id="btn-start" class="btn-3d btn-yellow btn-lg">▶ JOGAR AGORA</button>
+      </div>
     </div>
   </section>
 
@@ -53,6 +67,7 @@
       <div class="hud-pill pill-blue">⏱️ <strong id="hud-timer">05:00</strong></div>
       <div class="hud-pill pill-yellow">⭐ <strong id="hud-score">0</strong> pts</div>
       <div class="hud-pill pill-blue">📚 Frase <strong id="hud-level">1</strong></div>
+      <div class="hud-pill pill-mode" id="hud-mode">🟢 Fácil</div>
       <div class="hud-pill pill-green">🏆 Recorde: <strong id="hud-highscore">0</strong></div>
     </header>
 
@@ -81,6 +96,10 @@
       <p class="subtitle">Confira o resultado do seu desafio em Libras:</p>
 
       <div class="results-box">
+        <div class="result-row">
+          <span>Modo Jogado</span>
+          <strong class="highlight-blue" id="final-mode">🟢 Fácil</strong>
+        </div>
         <div class="result-row">
           <span>Pontuação Final</span>
           <strong class="highlight-yellow"><span id="final-score">0</span> pts</strong>

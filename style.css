@@ -16,7 +16,7 @@ body {
   position: relative;
 }
 
-/* Peças flutuantes decorativas no fundo (inspiradas no Wordox) */
+/* Peças flutuantes decorativas no fundo */
 .bg-tiles {
   position: fixed;
   inset: 0;
@@ -43,7 +43,7 @@ body {
 
 .tile-yellow { background: #facc15; box-shadow: 0 6px 0 #ca8a04; }
 .tile-blue   { background: #38bdf8; box-shadow: 0 6px 0 #0284c7; }
-.tile-green  { background: #22c55e; box-shadow: 0 6px 0 #15803d; }  
+.tile-green  { background: #22c55e; box-shadow: 0 6px 0 #15803d; }
 
 .t1 { top: 8%; left: 6%; transform: rotate(-14deg); }
 .t2 { top: 15%; right: 8%; transform: rotate(12deg); }
@@ -71,9 +71,9 @@ body {
 .game-logo {
   display: flex;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
   font-family: 'Fredoka', sans-serif;
-  font-size: 3.1rem;
+  font-size: 3rem;
   font-weight: 700;
   letter-spacing: 1px;
   user-select: none;
@@ -105,9 +105,9 @@ body {
   border: 6px solid #3b82f6;
   outline: 3px solid #1e293b;
   border-radius: 26px;
-  padding: 38px 32px 30px;
+  padding: 34px 30px 26px;
   text-align: center;
-  max-width: 600px;
+  max-width: 620px;
   width: 100%;
   box-shadow: 0 14px 0 #1d4ed8, 0 20px 35px rgba(15, 23, 42, 0.45);
 }
@@ -122,9 +122,9 @@ body {
   outline: 3px solid #1e293b;
   color: #1e3a8a;
   font-family: 'Fredoka', sans-serif;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  padding: 6px 26px;
+  padding: 5px 24px;
   border-radius: 999px;
   white-space: nowrap;
   box-shadow: 0 4px 0 #1d4ed8;
@@ -132,8 +132,8 @@ body {
 
 .subtitle {
   color: #475569;
-  margin-bottom: 20px;
-  font-size: 1.05rem;
+  margin-bottom: 16px;
+  font-size: 1.02rem;
   font-weight: 700;
 }
 
@@ -141,24 +141,24 @@ body {
   background: #fef3c7;
   border: 2.5px solid #f59e0b;
   border-radius: 16px;
-  padding: 18px 20px;
+  padding: 14px 18px;
   text-align: left;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .instructions-box h3 {
   font-family: 'Fredoka', sans-serif;
   color: #1e3a8a;
-  margin-bottom: 10px;
-  font-size: 1.15rem;
+  margin-bottom: 8px;
+  font-size: 1.1rem;
 }
 
 .instructions-box ul {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  font-size: 0.95rem;
+  gap: 8px;
+  font-size: 0.92rem;
   color: #334155;
   font-weight: 700;
 }
@@ -169,10 +169,76 @@ body {
   color: #ffffff;
   padding: 2px 10px;
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 800;
   margin-right: 6px;
   box-shadow: 0 2px 0 #1e3a8a;
+}
+
+/* Seletor de Dificuldade */
+.difficulty-box {
+  background: #eff6ff;
+  border: 2.5px solid #93c5fd;
+  border-radius: 16px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.difficulty-label {
+  display: block;
+  font-family: 'Fredoka', sans-serif;
+  color: #1e3a8a;
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+.difficulty-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.mode-btn {
+  flex: 1;
+  min-width: 210px;
+  cursor: pointer;
+  background: #ffffff;
+  color: #334155;
+  border: 3px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.12s ease;
+}
+
+.mode-btn small {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.mode-btn:hover {
+  border-color: #3b82f6;
+}
+
+.mode-btn.selected {
+  background: #dbeafe;
+  border-color: #2563eb;
+  outline: 2.5px solid #1e293b;
+  color: #1e3a8a;
+  box-shadow: 0 4px 0 #1d4ed8;
+  transform: translateY(-2px);
+}
+
+.mode-btn.selected small {
+  color: #1e40af;
 }
 
 .record-pill {
@@ -180,11 +246,11 @@ body {
   background: #dbeafe;
   border: 2.5px solid #3b82f6;
   color: #1e3a8a;
-  padding: 8px 20px;
+  padding: 6px 18px;
   border-radius: 999px;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 800;
-  margin-bottom: 22px;
+  margin-bottom: 18px;
 }
 
 /* Resultados Fim de Jogo */
@@ -203,7 +269,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: #334155;
   border-bottom: 2px dashed #cbd5e1;
@@ -215,9 +281,9 @@ body {
   padding-bottom: 0;
 }
 
-.highlight-yellow { color: #d97706; font-family: 'Fredoka', sans-serif; font-size: 1.4rem; }
-.highlight-blue   { color: #2563eb; font-family: 'Fredoka', sans-serif; font-size: 1.4rem; }
-.highlight-green  { color: #16a34a; font-family: 'Fredoka', sans-serif; font-size: 1.4rem; }
+.highlight-yellow { color: #d97706; font-family: 'Fredoka', sans-serif; font-size: 1.35rem; }
+.highlight-blue   { color: #2563eb; font-family: 'Fredoka', sans-serif; font-size: 1.35rem; }
+.highlight-green  { color: #16a34a; font-family: 'Fredoka', sans-serif; font-size: 1.35rem; }
 
 .gameover-actions {
   display: flex;
@@ -226,7 +292,7 @@ body {
   flex-wrap: wrap;
 }
 
-/* Botões Táteis 3D (inspirados na imagem de referência) */
+/* Botões Táteis 3D */
 .btn-3d {
   cursor: pointer;
   font-family: 'Fredoka', sans-serif;
@@ -281,7 +347,7 @@ body {
   border: 3px solid #1e293b;
   border-bottom: none;
   border-radius: 20px 20px 0 0;
-  padding: 10px 20px;
+  padding: 10px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -290,28 +356,18 @@ body {
 }
 
 .hud-pill {
-  padding: 5px 16px;
+  padding: 5px 14px;
   border-radius: 999px;
   border: 2.5px solid #1e293b;
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 0.95rem;
   box-shadow: 0 3px 0 #0f172a;
 }
 
-.pill-blue {
-  background: #3b82f6;
-  color: #ffffff;
-}
-
-.pill-yellow {
-  background: #facc15;
-  color: #1e293b;
-}
-
-.pill-green {
-  background: #22c55e;
-  color: #ffffff;
-}
+.pill-blue   { background: #3b82f6; color: #ffffff; }
+.pill-yellow { background: #facc15; color: #1e293b; }
+.pill-green  { background: #22c55e; color: #ffffff; }
+.pill-mode   { background: #fffbeb; color: #1e3a8a; }
 
 /* Container do Canvas */
 .canvas-wrapper {

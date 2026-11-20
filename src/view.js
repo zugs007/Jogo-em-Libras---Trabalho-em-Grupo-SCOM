@@ -33,7 +33,7 @@ class GameView {
       ? model.getClosestColliding(model.deckCards.filter((c) => !c.isPlaced), 2)
       : null;
 
-    // 1. FUNDO DA ARENA (Gramado claro e acolhedor com textura sutil)
+    // 1. FUNDO DA ARENA
     const arenaGrad = ctx.createLinearGradient(0, 0, 0, model.height);
     arenaGrad.addColorStop(0, "#bae6fd");
     arenaGrad.addColorStop(0.32, "#bbf7d0");
@@ -58,7 +58,12 @@ class GameView {
     // 5. PERSONAGEM
     this.drawPlayer(model.player);
 
-    // 6. CARTA CARREGADA (por cima de tudo)
+    // 6. DICA DO MODO FÁCIL EMBAIXO DA CARTA (quando o player passa por cima)
+    if (model.difficulty === "easy" && highlightedCard) {
+      this.drawCardLetterHint(highlightedCard);
+    }
+
+    // 7. CARTA CARREGADA (por cima de tudo)
     if (model.player.carriedCard) {
       this.drawCard(model.player.carriedCard, true);
     }
@@ -66,7 +71,6 @@ class GameView {
 
   drawArenaDetails(model) {
     const ctx = this.ctx;
-    // Detalhes decorativos leves na arena para dar profundidade sem atrapalhar a leitura
     const tufts = [
       [110, 210], [240, 320], [680, 225], [790, 330],
       [160, 355], [520, 290], [380, 215], [610, 350]
@@ -95,13 +99,11 @@ class GameView {
     const bw = model.width - 44;
     const bh = 152;
 
-    // Sombra 3D do quadro
     ctx.fillStyle = "#1e3a8a";
     ctx.beginPath();
     ctx.roundRect(bx, by + 5, bw, bh, 22);
     ctx.fill();
 
-    // Corpo do quadro em Azul Surdo claro
     ctx.fillStyle = "#93c5fd";
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 3;
@@ -110,19 +112,17 @@ class GameView {
     ctx.fill();
     ctx.stroke();
 
-    // Borda interna
     ctx.strokeStyle = "#2563eb";
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.roundRect(bx + 4, by + 4, bw - 8, bh - 8, 18);
     ctx.stroke();
 
-    // Pílula de feedback no topo do quadro
     ctx.fillStyle = "#fffbeb";
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(model.width / 2 - 270, by + 8, 540, 26, 999);
+    ctx.roundRect(model.width / 2 - 275, by + 8, 550, 26, 999);
     ctx.fill();
     ctx.stroke();
 
@@ -131,11 +131,9 @@ class GameView {
     ctx.textAlign = "center";
     ctx.fillText(model.feedbackMessage, model.width / 2, by + 25);
 
-    // Letras-alvo + Slots pontilhados
     for (const slot of model.slots) {
       if (slot.isSpace) continue;
 
-      // Letra-alvo com contorno estilo cartoon (Amarelo e Branco)
       ctx.font = "bold 26px Fredoka, Segoe UI, sans-serif";
       ctx.textAlign = "center";
       ctx.lineWidth = 4;
@@ -145,7 +143,6 @@ class GameView {
       ctx.fillStyle = highlightedSlot === slot ? "#fde047" : "#ffffff";
       ctx.fillText(slot.char, slot.x + slot.width / 2, slot.y - 10);
 
-      // Caixa do Slot
       let borderColor = "#3b82f6";
       let bgColor = "#ffffff";
       let isDashed = true;
@@ -176,7 +173,6 @@ class GameView {
       ctx.stroke();
       ctx.restore();
 
-      // Letra marca-d'água dentro do slot vazio
       if (!slot.placedCard) {
         ctx.fillStyle = "rgba(37, 99, 235, 0.18)";
         ctx.font = "bold 28px Fredoka, Segoe UI, sans-serif";
@@ -188,11 +184,10 @@ class GameView {
   drawBottomTray(model) {
     const ctx = this.ctx;
     const tx = 22;
-    const ty = 402;
+    const ty = 396;
     const tw = model.width - 44;
-    const th = 126;
+    const th = 136;
 
-    // Bandeja Azul Surdo escuro
     ctx.fillStyle = "#1e3a8a";
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 3;
@@ -201,18 +196,16 @@ class GameView {
     ctx.fill();
     ctx.stroke();
 
-    // Borda interna azul vibrante
     ctx.strokeStyle = "#3b82f6";
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.roundRect(tx + 5, ty + 5, tw - 10, th - 10, 18);
     ctx.stroke();
 
-    // Etiqueta do baralho
     ctx.fillStyle = "#93c5fd";
     ctx.font = "bold 12px Nunito, Segoe UI, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("BARALHO DE SINAIS EM LIBRAS", model.width / 2, ty + 21);
+    ctx.fillText("BARALHO DE SINAIS EM LIBRAS", model.width / 2, ty + 20);
   }
 
   drawCard(card, highlight) {
@@ -225,7 +218,7 @@ class GameView {
     ctx.roundRect(card.x, card.y + 4, card.width, card.height, 12);
     ctx.fill();
 
-    // Se a imagem inteira do Membro 2 já existir, desenha ela cheia
+    // Suporta as cartas inteiras do Membro 2 (A.png..Z.png) automaticamente
     if (img && img.loaded) {
       ctx.save();
       ctx.beginPath();
@@ -234,7 +227,6 @@ class GameView {
       ctx.drawImage(img, card.x, card.y, card.width, card.height);
       ctx.restore();
 
-      // Borda de destaque dourada quando o personagem encosta
       if (highlight) {
         ctx.strokeStyle = "#facc15";
         ctx.lineWidth = 3.5;
@@ -265,19 +257,40 @@ class GameView {
     ctx.textAlign = "center";
     ctx.fillText("LIBRAS", card.x + card.width / 2, card.y + 18);
 
-    ctx.font = "24px Segoe UI Emoji, sans-serif";
-    ctx.fillText("🤟", card.x + card.width / 2, card.y + 45);
+    ctx.font = "23px Segoe UI Emoji, sans-serif";
+    ctx.fillText("🤟", card.x + card.width / 2, card.y + 43);
 
     ctx.fillStyle = "#1e293b";
     ctx.font = "bold 11px Fredoka, Segoe UI, sans-serif";
-    ctx.fillText(`[${card.letter}]`, card.x + card.width / 2, card.y + 62);
+    ctx.fillText(`[${card.letter}]`, card.x + card.width / 2, card.y + 60);
+  }
+
+  // Etiqueta exibida embaixo da carta no Modo Fácil
+  drawCardLetterHint(card) {
+    const ctx = this.ctx;
+    const badgeW = 68;
+    const badgeH = 24;
+    const bx = card.x + (card.width - badgeW) / 2;
+    const by = card.y + card.height + 7;
+
+    ctx.fillStyle = "#facc15";
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, badgeW, badgeH, 999);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#1e293b";
+    ctx.font = "bold 13px Fredoka, Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(`Letra: ${card.letter}`, bx + badgeW / 2, by + 16);
   }
 
   drawPlayer(player) {
     const ctx = this.ctx;
     const img = this.images["player"];
 
-    // Sombra no chão
     ctx.fillStyle = "rgba(15, 23, 42, 0.25)";
     ctx.beginPath();
     ctx.ellipse(
@@ -294,7 +307,6 @@ class GameView {
     if (img && img.loaded) {
       ctx.drawImage(img, player.x, player.y, player.width, player.height);
     } else {
-      // Personagem provisório estilizado (Azul Surdo + Boné Amarelo)
       const cx = player.x + player.width / 2;
       const cy = player.y + player.height / 2;
 
@@ -306,14 +318,12 @@ class GameView {
       ctx.fill();
       ctx.stroke();
 
-      // Viseira/Boné amarelo
       ctx.fillStyle = "#facc15";
       ctx.beginPath();
       ctx.arc(cx, cy - 4, player.width / 2 - 4, Math.PI, 0);
       ctx.fill();
       ctx.stroke();
 
-      // Olhos expressivos
       ctx.fillStyle = "#ffffff";
       ctx.beginPath();
       ctx.arc(cx - 7, cy + 3, 4.5, 0, Math.PI * 2);
@@ -327,4 +337,4 @@ class GameView {
       ctx.fill();
     }
   }
-}   
+}

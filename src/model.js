@@ -22,9 +22,14 @@ class GameModel {
     ];
 
     this.alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    this.difficulty = "easy"; // "easy" | "hard"
     this.highScore = Number(localStorage.getItem("librasQuestHighScore")) || 0;
 
     this.resetGame();
+  }
+
+  setDifficulty(mode) {
+    this.difficulty = mode === "hard" ? "hard" : "easy";
   }
 
   resetGame() {
@@ -35,7 +40,10 @@ class GameModel {
     this.phraseStartTime = 300;
     this.isGameOver = false;
     this.isChecking = false;
-    this.feedbackMessage = "Pegue o sinal em Libras correspondente à letra!";
+    this.feedbackMessage =
+      this.difficulty === "easy"
+        ? "Modo Fácil: passe sobre a carta para ver a letra embaixo!"
+        : "Modo Difícil: identifique os sinais de memória!";
 
     this.player = {
       x: this.width / 2 - 24,
@@ -58,7 +66,7 @@ class GameModel {
     this.isChecking = false;
     this.player.carriedCard = null;
 
-    // 1. Slots da Zona Superior (alinhados ao quadro Azul Surdo)
+    // 1. Slots da Zona Superior
     const slotW = 56;
     const slotH = 66;
     const gap = 10;
@@ -89,7 +97,7 @@ class GameModel {
       }
     }
 
-    // 2. Deck da Zona Inferior (letras da frase + letras extras embaralhadas)
+    // 2. Deck da Zona Inferior (com espaço extra embaixo para a dica do Modo Fácil)
     const extraCount = Math.min(4, 12 - requiredLetters.length);
     const poolLetters = [...requiredLetters];
 
@@ -103,12 +111,12 @@ class GameModel {
       [poolLetters[i], poolLetters[j]] = [poolLetters[j], poolLetters[i]];
     }
 
-    const cardW = 58;
-    const cardH = 72;
+    const cardW = 56;
+    const cardH = 68;
     const cardGap = 14;
     const deckTotalWidth = poolLetters.length * (cardW + cardGap) - cardGap;
     const deckStartX = (this.width - deckTotalWidth) / 2;
-    const deckY = 432;
+    const deckY = 424;
 
     this.deckCards = poolLetters.map((letter, idx) => {
       const x = deckStartX + idx * (cardW + cardGap);
@@ -135,7 +143,6 @@ class GameModel {
     if (keys["ArrowLeft"] || keys["KeyA"]) this.player.x -= this.player.speed;
     if (keys["ArrowRight"] || keys["KeyD"]) this.player.x += this.player.speed;
 
-    // Permite alcançar tanto os slots superiores quanto o baralho inferior
     const minY = 112;
     const maxY = this.height - this.player.height - 10;
     this.player.x = Math.max(24, Math.min(this.width - this.player.width - 24, this.player.x));
@@ -254,7 +261,9 @@ class GameModel {
     const isPerfect = correctCount === letterSlots.length;
     const timeSpent = Math.max(0, this.phraseStartTime - this.timeLeft);
     const speedBonus = isPerfect ? Math.max(0, 30 - timeSpent) * 2 : 0;
-    const earnedPoints = correctCount * 20 + (isPerfect ? 50 : 0) + speedBonus;
+    const basePoints = correctCount * 20 + (isPerfect ? 50 : 0) + speedBonus;
+    const multiplier = this.difficulty === "hard" ? 1.5 : 1;
+    const earnedPoints = Math.round(basePoints * multiplier);
 
     this.score += earnedPoints;
 
@@ -265,7 +274,8 @@ class GameModel {
 
     if (isPerfect) {
       this.phrasesCompleted++;
-      this.feedbackMessage = `✅ Perfeito! +${earnedPoints} pts (Bônus agilidade: +${speedBonus})!`;
+      const hardTag = this.difficulty === "hard" ? " • Bônus Difícil 1.5x" : "";
+      this.feedbackMessage = `✅ Perfeito! +${earnedPoints} pts (Agilidade: +${speedBonus}${hardTag})!`;
     } else {
       this.feedbackMessage = `Você acertou ${correctCount}/${letterSlots.length} letras (+${earnedPoints} pts). Próxima frase...`;
     }

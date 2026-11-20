@@ -13,6 +13,16 @@ class GameController {
   }
 
   bindEvents() {
+    // Seletor de Dificuldade na Tela Inicial
+    const modeButtons = document.querySelectorAll(".mode-btn");
+    modeButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        modeButtons.forEach((b) => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        this.model.setDifficulty(btn.dataset.mode);
+      });
+    });
+
     document.getElementById("btn-start").addEventListener("click", () => this.startGame());
     document.getElementById("btn-restart").addEventListener("click", () => this.startGame());
     document.getElementById("btn-home").addEventListener("click", () => this.goHome());
@@ -84,6 +94,8 @@ class GameController {
     clearInterval(this.timerInterval);
     cancelAnimationFrame(this.animationFrameId);
 
+    const modeLabel = this.model.difficulty === "hard" ? "🔥 Difícil (1.5x)" : "🟢 Fácil";
+    document.getElementById("final-mode").textContent = modeLabel;
     document.getElementById("final-score").textContent = this.model.score;
     document.getElementById("final-phrases").textContent = this.model.phrasesCompleted;
     document.getElementById("final-highscore").textContent = this.model.highScore;
@@ -93,11 +105,13 @@ class GameController {
 
   updateHUD() {
     const minutes = String(Math.floor(this.model.timeLeft / 60)).padStart(2, "0");
-    const seconds = String(this.model.timeLeft % 60).padStart(2, "0");
+    const seconds = String(Math.floor(this.model.timeLeft % 60)).padStart(2, "0");
+    const modeLabel = this.model.difficulty === "hard" ? "🔥 Difícil" : "🟢 Fácil";
 
     document.getElementById("hud-timer").textContent = `${minutes}:${seconds}`;
     document.getElementById("hud-score").textContent = this.model.score;
     document.getElementById("hud-level").textContent = this.model.currentPhraseIndex + 1;
+    document.getElementById("hud-mode").textContent = modeLabel;
     document.getElementById("hud-highscore").textContent = this.model.highScore;
     document.getElementById("start-highscore").textContent = this.model.highScore;
   }
