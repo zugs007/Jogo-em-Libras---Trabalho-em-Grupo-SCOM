@@ -42,6 +42,10 @@ class GameController {
     // Ativa os botões do menu de Debug (F2)
     this.bindDebugEvents();
 
+    this.bindAlphabetEvents();
+
+    this.bindTouchEvents();
+
     window.addEventListener("keydown", (e) => {
       // Tecla F2 abre/fecha o menu de debug em qualquer tela
       if (e.code === "F2") {
@@ -55,6 +59,14 @@ class GameController {
       if (debugOverlay && !debugOverlay.classList.contains("hidden")) {
         if (e.code === "Escape") {
           this.toggleDebugModal(false);
+        }
+        return;
+      }
+
+      const alphabetOverlay = document.getElementById("alphabet-overlay");
+      if (alphabetOverlay && !alphabetOverlay.classList.contains("hidden")) {
+        if (e.code === "Escape") {
+          this.toggleAlphabetModal(false);
         }
         return;
       }
@@ -133,6 +145,127 @@ class GameController {
     this.updateHUD();
     this.renderSkinsMenu();
     this.toggleDebugModal(false);
+  }
+
+  bindAlphabetEvents() {
+    const btnOpen = document.getElementById("btn-alphabet");
+    const btnClose = document.getElementById("btn-alphabet-close");
+    const overlay = document.getElementById("alphabet-overlay");
+
+    if (!btnOpen || !btnClose || !overlay) return;
+
+    btnOpen.addEventListener("click", () => this.toggleAlphabetModal(true));
+    btnClose.addEventListener("click", () => this.toggleAlphabetModal(false));
+
+    // Fecha também se clicar fora da caixa branca
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        this.toggleAlphabetModal(false);
+      }
+    });
+  }
+
+  toggleAlphabetModal(forceState) {
+    const overlay = document.getElementById("alphabet-overlay");
+    if (!overlay) return;
+
+    const shouldOpen = typeof forceState === "boolean" ? forceState : overlay.classList.contains("hidden");
+
+    if (shouldOpen) {
+      this.renderAlphabetGrid();
+      overlay.classList.remove("hidden");
+    } else {
+      overlay.classList.add("hidden");
+    }
+  }
+
+  renderAlphabetGrid() {
+    const grid = document.getElementById("alphabet-grid");
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    for (const letter of this.model.alphabet) {
+      const card = document.createElement("div");
+      card.className = "alphabet-card";
+
+      const signBox = document.createElement("div");
+      signBox.className = "alphabet-sign-box";
+
+      const img = document.createElement("img");
+      img.src = `assets/imagens/${letter}.png`;
+      img.alt = `Sinal da letra ${letter} em Libras`;
+
+      const fallback = document.createElement("div");
+      fallback.className = "alphabet-fallback";
+      fallback.innerHTML = `🤟<small>Sinal ${letter}</small>`;
+      fallback.style.display = "none";
+
+      img.onerror = () => {
+        img.style.display = "none";
+        fallback.style.display = "flex";
+      };
+
+      signBox.appendChild(img);
+      signBox.appendChild(fallback);
+
+      const badge = document.createElement("span");
+      badge.className = "alphabet-letter";
+      badge.textContent = letter;
+
+      card.appendChild(signBox);
+      card.appendChild(badge);
+      grid.appendChild(card);
+    }
+  }
+
+  bindTouchEvents() {
+    const touchButtons = document.querySelectorAll(".touch-btn");
+    const btnInteract = document.getElementById("btn-touch-interact");
+
+    touchButtons.forEach((btn) => {
+      const key = btn.dataset.key;
+
+      const press = (e) => {
+        e.preventDefault();
+        if (this.model.isPaused) return;
+        this.keys[key] = true;
+        btn.classList.add("pressed");
+      };
+
+      const release = (e) => {
+        e.preventDefault();
+        this.keys[key] = false;
+        btn.classList.remove("pressed");
+      };
+
+      btn.addEventListener("touchstart", press, { passive: false });
+      btn.addEventListener("touchend", release, { passive: false });
+      btn.addEventListener("touchcancel", release, { passive: false });
+
+      // Suporte extra caso testem o modo celular pelo DevTools do PC com o mouse
+      btn.addEventListener("mousedown", press);
+      btn.addEventListener("mouseup", release);
+      btn.addEventListener("mouseleave", release);
+    });
+
+    if (btnInteract) {
+      btnInteract.addEventListener(
+        "touchstart",
+        (e) => {
+          e.preventDefault();
+          if (!this.model.isPaused) {
+            this.model.interact();
+          }
+        },
+        { passive: false }
+      );
+
+      btnInteract.addEventListener("click", () => {
+        if (!this.model.isPaused) {
+          this.model.interact();
+        }
+      });
+    }
   }
 
   renderSkinsMenu() {
