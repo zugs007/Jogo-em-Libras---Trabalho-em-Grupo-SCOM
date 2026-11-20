@@ -49,21 +49,24 @@ class GameView {
     // 3. BANDEJA INFERIOR AZUL SURDO (Baralho de Cartas)
     this.drawBottomTray(model);
 
-    // 4. CARTAS NO DECK E NOS SLOTS
+    // 4. OBSTÁCULOS MÓVEIS (Modo Difícil)
+    this.drawObstacles(model.obstacles);
+
+    // 5. CARTAS NO DECK E NOS SLOTS
     for (const card of model.deckCards) {
       if (model.player.carriedCard && model.player.carriedCard.id === card.id) continue;
       this.drawCard(card, highlightedCard === card);
     }
 
-    // 5. PERSONAGEM
+    // 6. PERSONAGEM
     this.drawPlayer(model.player);
 
-    // 6. DICA DO MODO FÁCIL EMBAIXO DA CARTA (quando o player passa por cima)
+    // 7. DICA DO MODO FÁCIL EMBAIXO DA CARTA
     if (model.difficulty === "easy" && highlightedCard) {
       this.drawCardLetterHint(highlightedCard);
     }
 
-    // 7. CARTA CARREGADA (por cima de tudo)
+    // 8. CARTA CARREGADA (por cima de tudo)
     if (model.player.carriedCard) {
       this.drawCard(model.player.carriedCard, true);
     }
@@ -89,6 +92,38 @@ class GameView {
       ctx.moveTo(x + 6, y);
       ctx.lineTo(x + 9, y - 8);
       ctx.stroke();
+    }
+  }
+
+  drawObstacles(obstacles) {
+    const ctx = this.ctx;
+    for (const obs of obstacles) {
+      // Sombra no chão
+      ctx.fillStyle = "rgba(15, 23, 42, 0.22)";
+      ctx.beginPath();
+      ctx.roundRect(obs.x, obs.y + 5, obs.width, obs.height, 999);
+      ctx.fill();
+
+      // Corpo da barreira estilo casual cartoon (Laranja/Coral com borda escura)
+      ctx.fillStyle = "#f97316";
+      ctx.strokeStyle = "#1e293b";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(obs.x, obs.y, obs.width, obs.height, 999);
+      ctx.fill();
+      ctx.stroke();
+
+      // Brilho interno superior
+      ctx.fillStyle = "#fdba74";
+      ctx.beginPath();
+      ctx.roundRect(obs.x + 8, obs.y + 4, obs.width - 16, 7, 999);
+      ctx.fill();
+
+      // Ícone/Texto de alerta
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 12px Fredoka, Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("⚡ RUÍDO", obs.x + obs.width / 2, obs.y + 22);
     }
   }
 
@@ -212,13 +247,11 @@ class GameView {
     const ctx = this.ctx;
     const img = this.images[card.letter];
 
-    // Sombra 3D da carta
     ctx.fillStyle = highlight ? "#ca8a04" : "#0f172a";
     ctx.beginPath();
     ctx.roundRect(card.x, card.y + 4, card.width, card.height, 12);
     ctx.fill();
 
-    // Suporta as cartas inteiras do Membro 2 (A.png..Z.png) automaticamente
     if (img && img.loaded) {
       ctx.save();
       ctx.beginPath();
@@ -237,7 +270,6 @@ class GameView {
       return;
     }
 
-    // Fallback provisório enquanto as imagens não chegam
     const isYellow = card.colorTheme === "yellow";
     ctx.fillStyle = "#ffffff";
     ctx.strokeStyle = highlight ? "#facc15" : "#1e293b";
@@ -265,7 +297,6 @@ class GameView {
     ctx.fillText(`[${card.letter}]`, card.x + card.width / 2, card.y + 60);
   }
 
-  // Etiqueta exibida embaixo da carta no Modo Fácil
   drawCardLetterHint(card) {
     const ctx = this.ctx;
     const badgeW = 68;
@@ -290,6 +321,21 @@ class GameView {
   drawPlayer(player) {
     const ctx = this.ctx;
     const img = this.images["player"];
+
+    // Efeito de piscada rápida após esbarrar em obstáculo
+    if (player.invulnFrames > 0 && Math.floor(player.invulnFrames / 5) % 2 === 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.45;
+      this.drawPlayerSprite(player, img);
+      ctx.restore();
+      return;
+    }
+
+    this.drawPlayerSprite(player, img);
+  }
+
+  drawPlayerSprite(player, img) {
+    const ctx = this.ctx;
 
     ctx.fillStyle = "rgba(15, 23, 42, 0.25)";
     ctx.beginPath();

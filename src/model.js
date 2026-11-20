@@ -34,7 +34,6 @@ class GameModel {
     this.difficulty = mode === "hard" ? "hard" : "easy";
   }
 
-  // Embaralha a lista de palavras (algoritmo Fisher-Yates)
   shufflePhrases() {
     const list = [...this.phrases];
     for (let i = list.length - 1; i > 0; i--) {
@@ -55,25 +54,36 @@ class GameModel {
     this.isChecking = false;
     this.feedbackMessage =
       this.difficulty === "easy"
-        ? "Modo Fácil: passe sobre a carta para ver a letra embaixo!"
-        : "Modo Difícil: identifique os sinais de memória!";
+        ? "Modo Fácil: passe sobre a carta para ver a letra e desvie da barreira!"
+        : "Modo Difícil: identifique os sinais de memória e desvie das barreiras!";
 
     this.player = {
       x: this.width / 2 - 24,
-      y: 250,
+      y: 265,
       width: 48,
       height: 48,
       speed: 5,
-      carriedCard: null
+      carriedCard: null,
+      invulnFrames: 0
     };
+
+    // 1 obstáculo mais lento no Fácil; 2 obstáculos mais rápidos no Difícil
+    this.obstacles =
+      this.difficulty === "hard"
+        ? [
+            { x: 140, y: 205, width: 64, height: 32, vx: 2.8 },
+            { x: 680, y: 325, width: 64, height: 32, vx: -3.2 }
+          ]
+        : [
+            { x: 180, y: 215, width: 64, height: 32, vx: 2.2 }
+          ];
 
     this.slots = [];
     this.deckCards = [];
     this.loadPhrase(this.currentPhraseIndex);
-  }
+  }s
 
   loadPhrase(index) {
-    // Se o jogador zerar todas as palavras dentro dos 5 min, reembaralha para continuar
     if (index > 0 && index % this.shuffledPhrases.length === 0) {
       this.shuffledPhrases = this.shufflePhrases();
     }
@@ -169,6 +179,53 @@ class GameModel {
     if (this.player.carriedCard) {
       this.player.carriedCard.x = this.player.x + (this.player.width - this.player.carriedCard.width) / 2;
       this.player.carriedCard.y = this.player.y - 38;
+    }
+  }
+
+  updateObstacles() {
+    if (this.isGameOver || this.isChecking || this.obstacles.length === 0) return;
+
+    if (this.player.invulnFrames > 0) {
+      this.player.invulnFrames--;
+    }
+
+    const minX = 32;
+    const maxX = this.width - 32;
+    const minY = 112;
+    const maxY = this.height - this.player.height - 10;
+
+    for (const obs of this.obstacles) {
+      obs.x += obs.vx;
+
+      if (obs.x <= minX) {
+        obs.x = minX;
+        obs.vx *= -1;
+      } else if (obs.x + obs.width >= maxX) {
+        obs.x = maxX - obs.width;
+        obs.vx *= -1;
+      }
+
+      // Colisão justa (-3px de tolerância para não punir de raspão)
+      if (this.player.invulnFrames <= 0 && this.checkCollision(this.player, obs, -3)) {
+        this.player.invulnFrames = 45; // ~0,75s de proteção após o toque
+
+        // Empurrão vertical afastando o personagem da barreira
+        const pCenterY = this.player.y + this.player.height / 2;
+        const oCenterY = obs.y + obs.height / 2;
+        const pushDir = pCenterY < oCenterY ? -1 : 1;
+        this.player.y = Math.max(minY, Math.min(maxY, this.player.y + pushDir * 28));
+
+        // Se estava carregando uma carta, ela cai de volta para o baralho
+        if (this.player.carriedCard) {
+          const card = this.player.carriedCard;
+          card.x = card.homeX;
+          card.y = card.homeY;
+          this.player.carriedCard = null;
+          this.feedbackMessage = "💥 Esbarrou na barreira! A carta voltou ao baralho.";
+        } else {
+          this.feedbackMessage = "💥 Cuidado com as barreiras em movimento!";
+        }
+      }
     }
   }
 

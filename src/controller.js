@@ -13,7 +13,6 @@ class GameController {
   }
 
   bindEvents() {
-    // Seletor de Dificuldade na Tela Inicial
     const modeButtons = document.querySelectorAll(".mode-btn");
     modeButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -82,6 +81,7 @@ class GameController {
     const loop = () => {
       if (!this.model.isGameOver) {
         this.model.movePlayer(this.keys);
+        this.model.updateObstacles();
         this.view.render(this.model);
         this.animationFrameId = requestAnimationFrame(loop);
       }
