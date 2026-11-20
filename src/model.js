@@ -1,7 +1,8 @@
 class GameModel {
-  constructor(canvasWidth, canvasHeight) {
+  constructor(canvasWidth, canvasHeight, isCompact = false) {
     this.width = canvasWidth;
     this.height = canvasHeight;
+    this.isCompact = isCompact;
 
     // Adicione quantas palavras/frases quiser aqui (MAIÚSCULAS, sem acento/Ç e até 12 caracteres)
     this.phrases = [
@@ -25,15 +26,15 @@ class GameModel {
     // Catálogo de Skins (Base + 9 Professores = 10 cards, 5 por fileira)
     this.skins = [
       { id: "default", name: "Padrão", unlockScore: 0 },
-      { id: "prof1", name: '"Parsec"', unlockScore: 200 },
-      { id: "prof2", name: '"Skywalker"', unlockScore: 450 },
-      { id: "prof3", name: '"Eurística"', unlockScore: 700 },
-      { id: "prof4", name: '"Já fizeram?"', unlockScore: 1000 },
-      { id: "prof5", name: '"Cachaça"', unlockScore: 1350 },
-      { id: "prof6", name: '"Capacitivo"', unlockScore: 1750 },
-      { id: "prof8", name: '"Bonequinho"', unlockScore: 2200 },
-      { id: "prof7", name: '"Pai de Meninas"', unlockScore: 2700 },
-      { id: "prof9", name: '"Boss Final"', unlockScore: 3300 }
+      { id: "prof1", name: '"parsec"', unlockScore: 200 },
+      { id: "prof2", name: '"skywalker"', unlockScore: 450 },
+      { id: "prof3", name: '"eurística"', unlockScore: 700 },
+      { id: "prof4", name: '"já fizeram?"', unlockScore: 1000 },
+      { id: "prof5", name: '"cachaça"', unlockScore: 1350 },
+      { id: "prof6", name: '"capacitivo"', unlockScore: 1750 },
+      { id: "prof8", name: '"bonequinho"', unlockScore: 2200 },
+      { id: "prof7", name: '"matlab"', unlockScore: 2700 },
+      { id: "prof9", name: '"boss final"', unlockScore: 3300 }
     ];
 
     this.shuffledPhrases = [];
@@ -45,6 +46,64 @@ class GameModel {
     this.selectedSkin = this.isSkinUnlocked(savedSkin) ? savedSkin : "default";
 
     this.resetGame();
+  }
+
+  getLayoutMetrics() {
+    const playerSize = this.isCompact ? 54 : 48;
+    const trayH = this.isCompact ? 216 : 136;
+    const trayY = this.height - trayH - 8;
+    const minY = 112;
+    const maxY = this.height - playerSize - 10;
+    const centerArenaY = Math.round((166 + trayY) / 2 - playerSize / 2);
+
+    return { playerSize, trayH, trayY, minY, maxY, centerArenaY };
+  }
+
+  setViewport(canvasWidth, canvasHeight, isCompact) {
+    if (this.width === canvasWidth && this.height === canvasHeight && this.isCompact === isCompact) {
+      return;
+    }
+
+    this.width = canvasWidth;
+    this.height = canvasHeight;
+    this.isCompact = isCompact;
+
+    const { playerSize, minY, maxY, centerArenaY } = this.getLayoutMetrics();
+
+    if (this.player) {
+      this.player.width = playerSize;
+      this.player.height = playerSize;
+      this.player.x = Math.max(24, Math.min(this.width - playerSize - 24, this.width / 2 - playerSize / 2));
+      this.player.y = Math.max(minY, Math.min(maxY, centerArenaY));
+    }
+
+    this.obstacles = this.createObstacles();
+
+    if (this.currentPhrase) {
+      this.layoutPhraseItems(this.currentPhrase);
+    }
+  }
+
+  createObstacles() {
+    if (this.isCompact) {
+      return this.difficulty === "hard"
+        ? [
+            { x: 60, y: 205, width: 64, height: 32, vx: 2.3 },
+            { x: this.width - 124, y: 365, width: 64, height: 32, vx: -2.6 }
+          ]
+        : [
+            { x: 80, y: 215, width: 64, height: 32, vx: 1.9 }
+          ];
+    }
+
+    return this.difficulty === "hard"
+      ? [
+          { x: 140, y: 205, width: 64, height: 32, vx: 2.8 },
+          { x: 680, y: 325, width: 64, height: 32, vx: -3.2 }
+        ]
+      : [
+          { x: 180, y: 215, width: 64, height: 32, vx: 2.2 }
+        ];
   }
 
   isSkinUnlocked(skinId) {
@@ -66,7 +125,6 @@ class GameModel {
     this.runStartHighScore = validScore;
     localStorage.setItem("librasQuestHighScore", String(this.highScore));
 
-    // Se a skin equipada ficou bloqueada novamente, volta para a Padrão
     if (!this.isSkinUnlocked(this.selectedSkin)) {
       this.selectedSkin = "default";
       localStorage.setItem("librasQuestSelectedSkin", "default");
@@ -102,25 +160,19 @@ class GameModel {
         ? "Modo Fácil: passe sobre a carta para ver a letra e desvie da barreira!"
         : "Modo Difícil: identifique os sinais de memória e desvie das barreiras!";
 
+    const { playerSize, centerArenaY } = this.getLayoutMetrics();
+
     this.player = {
-      x: this.width / 2 - 24,
-      y: 265,
-      width: 48,
-      height: 48,
+      x: this.width / 2 - playerSize / 2,
+      y: centerArenaY,
+      width: playerSize,
+      height: playerSize,
       speed: 5,
       carriedCard: null,
       invulnFrames: 0
     };
 
-    this.obstacles =
-      this.difficulty === "hard"
-        ? [
-            { x: 140, y: 205, width: 64, height: 32, vx: 2.8 },
-            { x: 680, y: 325, width: 64, height: 32, vx: -3.2 }
-          ]
-        : [
-            { x: 180, y: 215, width: 64, height: 32, vx: 2.2 }
-          ];
+    this.obstacles = this.createObstacles();
 
     this.slots = [];
     this.deckCards = [];
@@ -144,38 +196,15 @@ class GameModel {
     this.isChecking = false;
     this.player.carriedCard = null;
 
-    // 1. Slots da Zona Superior
-    const slotW = 56;
-    const slotH = 66;
-    const gap = 10;
-    const totalWidth = phrase.length * (slotW + gap) - gap;
-    const startX = (this.width - totalWidth) / 2;
-    const slotY = 82;
-
-    this.slots = [];
+    // 1. Letras necessárias da frase
     const requiredLetters = [];
-
     for (let i = 0; i < phrase.length; i++) {
-      const char = phrase[i];
-      const x = startX + i * (slotW + gap);
-      if (char === " ") {
-        this.slots.push({ isSpace: true, x, y: slotY, width: slotW, height: slotH });
-      } else {
-        requiredLetters.push(char);
-        this.slots.push({
-          isSpace: false,
-          char,
-          x,
-          y: slotY,
-          width: slotW,
-          height: slotH,
-          placedCard: null,
-          status: "empty"
-        });
+      if (phrase[i] !== " ") {
+        requiredLetters.push(phrase[i]);
       }
     }
 
-    // 2. Deck da Zona Inferior
+    // 2. Embaralha cartas do deck (letras certas + extras)
     const extraCount = Math.min(4, 12 - requiredLetters.length);
     const poolLetters = [...requiredLetters];
 
@@ -189,28 +218,121 @@ class GameModel {
       [poolLetters[i], poolLetters[j]] = [poolLetters[j], poolLetters[i]];
     }
 
-    const cardW = 56;
-    const cardH = 68;
-    const cardGap = 14;
-    const deckTotalWidth = poolLetters.length * (cardW + cardGap) - cardGap;
-    const deckStartX = (this.width - deckTotalWidth) / 2;
-    const deckY = 424;
+    this.deckCards = poolLetters.map((letter, idx) => ({
+      id: idx,
+      letter,
+      colorTheme: idx % 2 === 0 ? "yellow" : "blue",
+      x: 0,
+      y: 0,
+      homeX: 0,
+      homeY: 0,
+      width: 56,
+      height: 68,
+      homeW: 56,
+      homeH: 68,
+      isPlaced: false
+    }));
 
-    this.deckCards = poolLetters.map((letter, idx) => {
-      const x = deckStartX + idx * (cardW + cardGap);
-      return {
-        id: idx,
-        letter,
-        colorTheme: idx % 2 === 0 ? "yellow" : "blue",
-        x,
-        y: deckY,
-        homeX: x,
-        homeY: deckY,
-        width: cardW,
-        height: cardH,
-        isPlaced: false
-      };
-    });
+    this.slots = phrase.split("").map((char) => ({
+      isSpace: char === " ",
+      char,
+      x: 0,
+      y: 82,
+      width: 56,
+      height: 66,
+      placedCard: null,
+      status: "empty"
+    }));
+
+    this.layoutPhraseItems(phrase);
+  }
+
+  layoutPhraseItems(phrase) {
+    // 1. Posiciona Slots da Zona Superior adaptando à largura da tela
+    const gap = this.isCompact ? 6 : 10;
+    const maxSlotsWidth = this.width - 68;
+    const slotW = Math.min(56, Math.floor((maxSlotsWidth - (phrase.length - 1) * gap) / phrase.length));
+    const slotH = this.isCompact ? Math.max(54, Math.min(68, Math.round(slotW * 1.22))) : 66;
+    const totalWidth = phrase.length * (slotW + gap) - gap;
+    const startX = (this.width - totalWidth) / 2;
+    const slotY = 82;
+
+    for (let i = 0; i < this.slots.length; i++) {
+      const slot = this.slots[i];
+      slot.x = startX + i * (slotW + gap);
+      slot.y = slotY;
+      slot.width = slotW;
+      slot.height = slotH;
+
+      if (slot.placedCard) {
+        slot.placedCard.width = slotW;
+        slot.placedCard.height = slotH;
+        slot.placedCard.x = slot.x;
+        slot.placedCard.y = slot.y;
+      }
+    }
+
+    // 2. Posiciona Deck da Zona Inferior (1 fileira no PC, 2 fileiras maiores no celular)
+    const totalCards = this.deckCards.length;
+
+    if (this.isCompact) {
+      const cardW = 62;
+      const cardH = 74;
+      const cardGap = 12;
+      const row1Count = Math.ceil(totalCards / 2);
+      const row2Count = totalCards - row1Count;
+      const row1Y = this.height - 196;
+      const row2Y = this.height - 112;
+
+      this.deckCards.forEach((card, idx) => {
+        const isRow1 = idx < row1Count;
+        const col = isRow1 ? idx : idx - row1Count;
+        const colsInRow = isRow1 ? row1Count : row2Count;
+        const rowWidth = colsInRow * (cardW + cardGap) - cardGap;
+        const rowStartX = (this.width - rowWidth) / 2;
+
+        card.homeX = rowStartX + col * (cardW + cardGap);
+        card.homeY = isRow1 ? row1Y : row2Y;
+        card.homeW = cardW;
+        card.homeH = cardH;
+
+        if (!card.isPlaced && this.player.carriedCard !== card) {
+          card.x = card.homeX;
+          card.y = card.homeY;
+          card.width = cardW;
+          card.height = cardH;
+        }
+      });
+    } else {
+      const cardW = 56;
+      const cardH = 68;
+      const cardGap = 14;
+      const deckTotalWidth = totalCards * (cardW + cardGap) - cardGap;
+      const deckStartX = (this.width - deckTotalWidth) / 2;
+      const deckY = this.height - 116;
+
+      this.deckCards.forEach((card, idx) => {
+        card.homeX = deckStartX + idx * (cardW + cardGap);
+        card.homeY = deckY;
+        card.homeW = cardW;
+        card.homeH = cardH;
+
+        if (!card.isPlaced && this.player.carriedCard !== card) {
+          card.x = card.homeX;
+          card.y = card.homeY;
+          card.width = cardW;
+          card.height = cardH;
+        }
+      });
+    }
+  }
+
+  returnCardToDeck(card) {
+    card.width = card.homeW;
+    card.height = card.homeH;
+    card.x = card.homeX;
+    card.y = card.homeY;
+    card.isPlaced = false;
   }
 
   movePlayer(keys) {
@@ -221,8 +343,7 @@ class GameModel {
     if (keys["ArrowLeft"] || keys["KeyA"]) this.player.x -= this.player.speed;
     if (keys["ArrowRight"] || keys["KeyD"]) this.player.x += this.player.speed;
 
-    const minY = 112;
-    const maxY = this.height - this.player.height - 10;
+    const { minY, maxY } = this.getLayoutMetrics();
     this.player.x = Math.max(24, Math.min(this.width - this.player.width - 24, this.player.x));
     this.player.y = Math.max(minY, Math.min(maxY, this.player.y));
 
@@ -241,8 +362,7 @@ class GameModel {
 
     const minX = 32;
     const maxX = this.width - 32;
-    const minY = 112;
-    const maxY = this.height - this.player.height - 10;
+    const { minY, maxY } = this.getLayoutMetrics();
 
     for (const obs of this.obstacles) {
       obs.x += obs.vx;
@@ -264,9 +384,7 @@ class GameModel {
         this.player.y = Math.max(minY, Math.min(maxY, this.player.y + pushDir * 28));
 
         if (this.player.carriedCard) {
-          const card = this.player.carriedCard;
-          card.x = card.homeX;
-          card.y = card.homeY;
+          this.returnCardToDeck(this.player.carriedCard);
           this.player.carriedCard = null;
           this.feedbackMessage = "💥 Esbarrou na barreira! A carta voltou ao baralho.";
         } else {
@@ -317,7 +435,7 @@ class GameModel {
 
       if (targetCard) {
         this.player.carriedCard = targetCard;
-        this.feedbackMessage = "Leve a carta até o espaço abaixo da letra e aperte Espaço!";
+        this.feedbackMessage = "Leve a carta até o espaço abaixo da letra e solte!";
         return;
       }
 
@@ -329,8 +447,10 @@ class GameModel {
         targetSlot.placedCard = null;
         targetSlot.status = "empty";
         card.isPlaced = false;
+        card.width = card.homeW;
+        card.height = card.homeH;
         this.player.carriedCard = card;
-        this.feedbackMessage = "Carta retirada! Reposicione ou aperte Espaço para devolver.";
+        this.feedbackMessage = "Carta retirada! Reposicione ou solte para devolver.";
         return;
       }
     } else {
@@ -339,19 +459,19 @@ class GameModel {
 
       if (targetSlot) {
         const card = this.player.carriedCard;
-        card.x = targetSlot.x + (targetSlot.width - card.width) / 2;
-        card.y = targetSlot.y + (targetSlot.height - card.height) / 2;
+        card.width = targetSlot.width;
+        card.height = targetSlot.height;
+        card.x = targetSlot.x;
+        card.y = targetSlot.y;
         card.isPlaced = true;
         targetSlot.placedCard = card;
         targetSlot.status = "filled";
         this.player.carriedCard = null;
-        this.feedbackMessage = "Carta encaixada! Complete a frase e aperte Enter para verificar.";
+        this.feedbackMessage = "Carta encaixada! Complete a frase e clique em Verificar.";
         return;
       }
 
-      const card = this.player.carriedCard;
-      card.x = card.homeX;
-      card.y = card.homeY;
+      this.returnCardToDeck(this.player.carriedCard);
       this.player.carriedCard = null;
       this.feedbackMessage = "Carta devolvida ao baralho inferior.";
     }

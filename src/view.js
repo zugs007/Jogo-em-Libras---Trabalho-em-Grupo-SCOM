@@ -1,21 +1,21 @@
 class GameView {
-    constructor(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext("2d");
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext("2d");
 
-        // Canvas auxiliar para piscar o personagem inteiro sem mostrar camadas internas
-        this.playerBuffer = document.createElement("canvas");
-        this.playerBuffer.width = 100;
-        this.playerBuffer.height = 100;
-        this.playerBufferCtx = this.playerBuffer.getContext("2d");
+    // Canvas auxiliar para piscar o personagem inteiro sem mostrar camadas internas
+    this.playerBuffer = document.createElement("canvas");
+    this.playerBuffer.width = 100;
+    this.playerBuffer.height = 100;
+    this.playerBufferCtx = this.playerBuffer.getContext("2d");
 
-        this.images = {};
-        this.loadImage("player", "assets/imagens/personagem.png");
+    this.images = {};
+    this.loadImage("player", "assets/imagens/personagem.png");
 
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((letter) => {
-        this.loadImage(letter, `assets/imagens/${letter}.png`);
-        });
-    }
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((letter) => {
+      this.loadImage(letter, `assets/imagens/${letter}.png`);
+    });
+  }
 
   loadImage(key, src) {
     const img = new Image();
@@ -87,16 +87,18 @@ class GameView {
 
   drawArenaDetails(model) {
     const ctx = this.ctx;
-    const tufts = [
-      [110, 210], [240, 320], [680, 225], [790, 330],
-      [160, 355], [520, 290], [380, 215], [610, 350]
+    const relativeTufts = [
+      [0.14, 0.38], [0.28, 0.56], [0.75, 0.40], [0.86, 0.58],
+      [0.20, 0.62], [0.58, 0.50], [0.42, 0.39], [0.68, 0.59]
     ];
 
     ctx.strokeStyle = "#4ade80";
     ctx.lineWidth = 2.5;
     ctx.lineCap = "round";
 
-    for (const [x, y] of tufts) {
+    for (const [rx, ry] of relativeTufts) {
+      const x = model.width * rx;
+      const y = model.height * ry;
       ctx.beginPath();
       ctx.moveTo(x - 6, y);
       ctx.lineTo(x - 9, y - 8);
@@ -141,7 +143,7 @@ class GameView {
     const bx = 22;
     const by = 10;
     const bw = model.width - 44;
-    const bh = 152;
+    const bh = model.isCompact ? 156 : 152;
 
     ctx.fillStyle = "#1e3a8a";
     ctx.beginPath();
@@ -162,23 +164,25 @@ class GameView {
     ctx.roundRect(bx + 4, by + 4, bw - 8, bh - 8, 18);
     ctx.stroke();
 
+    const pillW = Math.min(550, model.width - 66);
     ctx.fillStyle = "#fffbeb";
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(model.width / 2 - 275, by + 8, 550, 26, 999);
+    ctx.roundRect(model.width / 2 - pillW / 2, by + 8, pillW, 26, 999);
     ctx.fill();
     ctx.stroke();
 
     ctx.fillStyle = "#1e3a8a";
-    ctx.font = "bold 13.5px Nunito, Segoe UI, sans-serif";
+    ctx.font = model.isCompact ? "bold 12px Nunito, Segoe UI, sans-serif" : "bold 13.5px Nunito, Segoe UI, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(model.feedbackMessage, model.width / 2, by + 25);
 
     for (const slot of model.slots) {
       if (slot.isSpace) continue;
 
-      ctx.font = "bold 26px Fredoka, Segoe UI, sans-serif";
+      const letterFontSize = slot.width < 48 ? 22 : 26;
+      ctx.font = `bold ${letterFontSize}px Fredoka, Segoe UI, sans-serif`;
       ctx.textAlign = "center";
       ctx.lineWidth = 4;
       ctx.strokeStyle = "#1e293b";
@@ -219,8 +223,8 @@ class GameView {
 
       if (!slot.placedCard) {
         ctx.fillStyle = "rgba(37, 99, 235, 0.18)";
-        ctx.font = "bold 28px Fredoka, Segoe UI, sans-serif";
-        ctx.fillText(slot.char, slot.x + slot.width / 2, slot.y + 44);
+        ctx.font = `bold ${letterFontSize + 2}px Fredoka, Segoe UI, sans-serif`;
+        ctx.fillText(slot.char, slot.x + slot.width / 2, slot.y + slot.height * 0.67);
       }
     }
   }
@@ -228,9 +232,9 @@ class GameView {
   drawBottomTray(model) {
     const ctx = this.ctx;
     const tx = 22;
-    const ty = 396;
+    const th = model.isCompact ? 216 : 136;
+    const ty = model.height - th - 8;
     const tw = model.width - 44;
-    const th = 136;
 
     ctx.fillStyle = "#1e3a8a";
     ctx.strokeStyle = "#1e293b";
@@ -296,14 +300,14 @@ class GameView {
     ctx.fillStyle = isYellow ? "#854d0e" : "#1e3a8a";
     ctx.font = "bold 10px Nunito, Segoe UI, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("LIBRAS", card.x + card.width / 2, card.y + 18);
+    ctx.fillText("LIBRAS", card.x + card.width / 2, card.y + 17);
 
-    ctx.font = "23px Segoe UI Emoji, sans-serif";
-    ctx.fillText("🤟", card.x + card.width / 2, card.y + 43);
+    ctx.font = `${Math.round(card.height * 0.34)}px Segoe UI Emoji, sans-serif`;
+    ctx.fillText("🤟", card.x + card.width / 2, card.y + card.height * 0.63);
 
     ctx.fillStyle = "#1e293b";
     ctx.font = "bold 11px Fredoka, Segoe UI, sans-serif";
-    ctx.fillText(`[${card.letter}]`, card.x + card.width / 2, card.y + 60);
+    ctx.fillText(`[${card.letter}]`, card.x + card.width / 2, card.y + card.height - 7);
   }
 
   drawCardLetterHint(card) {
@@ -311,7 +315,7 @@ class GameView {
     const badgeW = 68;
     const badgeH = 24;
     const bx = card.x + (card.width - badgeW) / 2;
-    const by = card.y + card.height + 7;
+    const by = card.y + card.height + 6;
 
     ctx.fillStyle = "#facc15";
     ctx.strokeStyle = "#1e293b";
@@ -327,7 +331,7 @@ class GameView {
     ctx.fillText(`Letra: ${card.letter}`, bx + badgeW / 2, by + 16);
   }
 
-drawPlayer(player, skinId = "default") {
+  drawPlayer(player, skinId = "default") {
     const ctx = this.ctx;
     const isBlinking = player.invulnFrames > 0 && Math.floor(player.invulnFrames / 5) % 2 === 0;
 
@@ -365,7 +369,6 @@ drawPlayer(player, skinId = "default") {
 
   // --- HELPERS DE CABELO, BARBA E ÓCULOS ---
 
-  // Cabelo feminino longo (prof1 e prof4)
   drawLongHairBack(ctx, cx, cy, r, mainColor, strokeColor, shineColor) {
     ctx.fillStyle = mainColor;
     ctx.strokeStyle = strokeColor;
@@ -411,13 +414,11 @@ drawPlayer(player, skinId = "default") {
     ctx.fill();
   }
 
-  // Cabelo feminino médio loiro penteado para trás ("bonequinho" - prof8)
   drawMediumBlondeHairBack(ctx, cx, cy, r) {
     ctx.fillStyle = "#fcd34d";
     ctx.strokeStyle = "#92400e";
     ctx.lineWidth = 2.3;
 
-    // Volume atrás da cabeça descendo até a altura dos ombros (cy + 0.68r)
     ctx.beginPath();
     ctx.moveTo(cx - r * 0.9, cy - r * 0.35);
     ctx.bezierCurveTo(
@@ -433,7 +434,6 @@ drawPlayer(player, skinId = "default") {
     ctx.fill();
     ctx.stroke();
 
-    // Fios loiros claros penteados para trás
     ctx.strokeStyle = "#fef9c3";
     ctx.lineWidth = 1.6;
     ctx.beginPath();
@@ -449,7 +449,6 @@ drawPlayer(player, skinId = "default") {
     ctx.strokeStyle = "#92400e";
     ctx.lineWidth = 1.8;
 
-    // Mechas laterais puxadas para trás na linha da testa
     ctx.beginPath();
     ctx.moveTo(cx - r * 0.92, cy - r * 0.18);
     ctx.quadraticCurveTo(cx - r * 0.95, cy - r * 0.95, cx, cy - r * 1.04);
@@ -461,7 +460,6 @@ drawPlayer(player, skinId = "default") {
     ctx.stroke();
   }
 
-  // Corte masculino curto natural com costeletas e linha da testa orgânica ("skywalker" e "eurística")
   drawShortMenHair(ctx, cx, cy, r, fillColor, strokeColor, detailColor, isVeryShort = false) {
     const topBump = isVeryShort ? r * 1.03 : r * 1.09;
     const foreheadY = isVeryShort ? cy - r * 0.66 : cy - r * 0.6;
@@ -471,26 +469,21 @@ drawPlayer(player, skinId = "default") {
     ctx.lineWidth = 2.1;
 
     ctx.beginPath();
-    // Costeleta esquerda
     ctx.moveTo(cx - r * 0.95, cy - r * 0.06);
     ctx.lineTo(cx - r * 0.99, cy - r * 0.32);
-    // Topo arredondado natural
     ctx.bezierCurveTo(
       cx - r * 0.96, -topBump + cy - r * 0.12,
       cx + r * 0.96, -topBump + cy - r * 0.12,
       cx + r * 0.99, cy - r * 0.32
     );
-    // Costeleta direita
     ctx.lineTo(cx + r * 0.95, cy - r * 0.06);
     ctx.lineTo(cx + r * 0.85, cy - r * 0.26);
-    // Linha natural da testa (leve risca lateral suave)
     ctx.quadraticCurveTo(cx + r * 0.45, foreheadY - r * 0.06, cx + r * 0.15, foreheadY);
     ctx.quadraticCurveTo(cx - r * 0.38, foreheadY - r * 0.05, cx - r * 0.85, cy - r * 0.26);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // Textura sutil de fios curtos
     ctx.strokeStyle = detailColor;
     ctx.lineWidth = 1.4;
     ctx.beginPath();
@@ -556,10 +549,8 @@ drawPlayer(player, skinId = "default") {
     ctx.stroke();
   }
 
-  // Barba ralinha com pelinhos curtos (para o "skywalker")
   drawLightBeard(ctx, cx, cy, r) {
     ctx.save();
-    // Sombra rala no queixo e maxilar inferior
     ctx.fillStyle = "rgba(148, 163, 184, 0.38)";
     ctx.beginPath();
     ctx.arc(cx, cy, r * 0.97, Math.PI * 0.22, Math.PI * 0.78);
@@ -567,13 +558,11 @@ drawPlayer(player, skinId = "default") {
     ctx.closePath();
     ctx.fill();
 
-    // Pelinhos ralos (traços curtos inclinados para não parecer boca)
     ctx.strokeStyle = "#64748b";
     ctx.lineWidth = 1.3;
     ctx.lineCap = "round";
     ctx.beginPath();
 
-    // Bigode ralinho curvando para baixo
     const mustacheOffsets = [-0.3, -0.2, -0.1, 0.1, 0.2, 0.3];
     for (const off of mustacheOffsets) {
       const mx = cx + r * off;
@@ -582,7 +571,6 @@ drawPlayer(player, skinId = "default") {
       ctx.lineTo(mx + r * off * 0.18, my + r * 0.09);
     }
 
-    // Fios ralos no contorno do queixo
     for (let a = 0.28; a <= 0.72; a += 0.088) {
       const ang = Math.PI * a;
       ctx.moveTo(cx + Math.cos(ang) * r * 0.75, cy + Math.sin(ang) * r * 0.75);
@@ -592,13 +580,11 @@ drawPlayer(player, skinId = "default") {
     ctx.restore();
   }
 
-  // Barba curta aparada + bigode curvado para baixo (para "matlab" e "boss final")
   drawShortBeard(ctx, cx, cy, r, fillColor, strokeColor) {
     ctx.fillStyle = fillColor;
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth = 1.5;
 
-    // Barba concentrada na borda inferior do queixo
     ctx.beginPath();
     ctx.moveTo(cx - r * 0.78, cy + r * 0.34);
     ctx.quadraticCurveTo(cx - r * 0.4, cy + r * 0.64, cx, cy + r * 0.6);
@@ -608,7 +594,6 @@ drawPlayer(player, skinId = "default") {
     ctx.fill();
     ctx.stroke();
 
-    // Bigode curvado (arqueado no centro e caído nas pontas)
     ctx.beginPath();
     ctx.moveTo(cx - r * 0.42, cy + r * 0.46);
     ctx.quadraticCurveTo(cx - r * 0.22, cy + r * 0.24, cx, cy + r * 0.28);
@@ -620,11 +605,9 @@ drawPlayer(player, skinId = "default") {
     ctx.stroke();
   }
 
-  // Método principal de renderização de todas as skins
   drawSkinAvatar(ctx, cx, cy, r, skinId) {
     ctx.save();
 
-    // 1. CAMADA DE TRÁS (Cabelos médios/longos)
     if (skinId === "prof1") {
       this.drawLongHairBack(ctx, cx, cy, r, "#18181b", "#09090b", "#3f3f46");
     } else if (skinId === "prof4") {
@@ -633,7 +616,6 @@ drawPlayer(player, skinId = "default") {
       this.drawMediumBlondeHairBack(ctx, cx, cy, r);
     }
 
-    // 2. CORPO BASE (Bolinha inteira amarela)
     ctx.fillStyle = "#facc15";
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 3;
@@ -642,13 +624,11 @@ drawPlayer(player, skinId = "default") {
     ctx.fill();
     ctx.stroke();
 
-    // Brilho suave no topo da esfera
     ctx.fillStyle = "rgba(254, 249, 195, 0.5)";
     ctx.beginPath();
     ctx.ellipse(cx - r * 0.25, cy - r * 0.42, r * 0.3, r * 0.14, -0.4, 0, Math.PI * 2);
     ctx.fill();
 
-    // 3. OLHOS EXPRESSIVOS
     const hasBeard = skinId === "prof2" || skinId === "prof7" || skinId === "prof9";
     const eyeY = hasBeard ? cy - r * 0.08 : cy - r * 0.02;
     const eyeOffsetX = r * 0.32;
@@ -666,34 +646,33 @@ drawPlayer(player, skinId = "default") {
     ctx.arc(cx + eyeOffsetX + 0.8, eyeY, eyeR * 0.52, 0, Math.PI * 2);
     ctx.fill();
 
-    // 4. DETALHES DA FRENTE POR PROFESSOR
     switch (skinId) {
-      case "prof1": // "parsec" - cabelo longo preto + óculos
+      case "prof1":
         this.drawLongHairFrontBangs(ctx, cx, cy, r, "#18181b");
         this.drawGlasses(ctx, cx, eyeY, eyeOffsetX, r);
         break;
 
-      case "prof2": // "skywalker" - cabelo curto natural e barba ralinha grisalhos
+      case "prof2":
         this.drawShortMenHair(ctx, cx, cy, r, "#cbd5e1", "#475569", "#f8fafc", false);
         this.drawLightBeard(ctx, cx, cy, r);
         break;
 
-      case "prof3": // "eurística" - cabelo preto bem curto natural + óculos
+      case "prof3":
         this.drawShortMenHair(ctx, cx, cy, r, "#18181b", "#09090b", "#52525b", true);
         this.drawGlasses(ctx, cx, eyeY, eyeOffsetX, r);
         break;
 
-      case "prof4": // "já fizeram?" - cabelo longo castanho + óculos
+      case "prof4":
         this.drawLongHairFrontBangs(ctx, cx, cy, r, "#5c3317");
         this.drawGlasses(ctx, cx, eyeY, eyeOffsetX, r);
         break;
 
-      case "prof5": // "cachaça" - topete preto + óculos
+      case "prof5":
         this.drawTopete(ctx, cx, cy, r, "#18181b", "#09090b");
         this.drawGlasses(ctx, cx, eyeY, eyeOffsetX, r);
         break;
 
-      case "prof6": // "capacitivo" - cabelo preto curto-médio + óculos
+      case "prof6":
         ctx.fillStyle = "#18181b";
         ctx.strokeStyle = "#09090b";
         ctx.lineWidth = 2.2;
@@ -711,16 +690,16 @@ drawPlayer(player, skinId = "default") {
         this.drawGlasses(ctx, cx, eyeY, eyeOffsetX, r);
         break;
 
-      case "prof7": // "matlab" - topete preto + barba curta aparada
+      case "prof7":
         this.drawTopete(ctx, cx, cy, r, "#18181b", "#09090b");
         this.drawShortBeard(ctx, cx, cy, r, "#18181b", "#09090b");
         break;
 
-      case "prof8": // "bonequinho" - cabelo loiro médio penteado para trás
+      case "prof8":
         this.drawMediumBlondeHairFront(ctx, cx, cy, r);
         break;
 
-      case "prof9": // "boss final" - topete grisalho + óculos + barba grisalha
+      case "prof9":
         this.drawTopete(ctx, cx, cy, r, "#cbd5e1", "#475569");
         this.drawShortBeard(ctx, cx, cy, r, "#cbd5e1", "#475569");
         this.drawGlasses(ctx, cx, eyeY, eyeOffsetX, r);

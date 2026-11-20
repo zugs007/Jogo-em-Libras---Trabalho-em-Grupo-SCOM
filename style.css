@@ -9,6 +9,7 @@ body {
   background: radial-gradient(circle at top, #38bdf8 0%, #2563eb 50%, #1e3a8a 100%);
   color: #1e293b;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -296,15 +297,9 @@ body {
 
 .skin-title {
   font-family: 'Fredoka', sans-serif;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   color: #1e293b;
   line-height: 1.1;
-}
-
-.skin-sub {
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: #475569;
 }
 
 .skin-status {
@@ -329,6 +324,14 @@ body {
   font-size: 0.96rem;
   font-weight: 800;
   margin-bottom: 14px;
+}
+
+.start-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 /* Banner de Skin Desbloqueada no Fim de Jogo */
@@ -573,6 +576,111 @@ canvas {
 .action-buttons {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Modal de Consulta do Alfabeto em Libras */
+.alphabet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 900;
+  padding: 16px;
+}
+
+.alphabet-overlay.hidden {
+  display: none;
+}
+
+.alphabet-modal {
+  position: relative;
+  background: #fffbeb;
+  border: 6px solid #3b82f6;
+  outline: 3px solid #1e293b;
+  border-radius: 26px;
+  padding: 32px 22px 20px;
+  text-align: center;
+  max-width: 760px;
+  width: 100%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 14px 0 #1d4ed8, 0 20px 35px rgba(15, 23, 42, 0.5);
+}
+
+.alphabet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 10px;
+  overflow-y: auto;
+  padding: 6px 4px 12px;
+  margin-bottom: 12px;
+}
+
+.alphabet-card {
+  background: #ffffff;
+  border: 3px solid #1e293b;
+  border-radius: 14px;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 0 #cbd5e1;
+}
+
+.alphabet-sign-box {
+  width: 64px;
+  height: 80px;
+  border-radius: 10px;
+  background: #bae6fd;
+  border: 2px solid #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.alphabet-sign-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.alphabet-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 1.5rem;
+}
+
+.alphabet-fallback small {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  text-transform: uppercase;
+}
+
+.alphabet-letter {
+  background: #facc15;
+  border: 2px solid #1e293b;
+  color: #1e293b;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 1px 14px;
+  border-radius: 999px;
+}
+
+.alphabet-close-btn {
+  align-self: center;
+  min-width: 220px;
 }
 
 /* Menu Secreto de Debug (F2) */
@@ -639,132 +747,55 @@ canvas {
   width: 100%;
 }
 
-/* Botões da Tela Inicial */
-.start-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-/* Modal de Consulta do Alfabeto em Libras */
-.alphabet-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.75);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 900;
-  padding: 16px;
-}
-
-.alphabet-overlay.hidden {
-  display: none;
-}
-
-.alphabet-modal {
-  position: relative;
-  background: #fffbeb;
-  border: 6px solid #3b82f6;
-  outline: 3px solid #1e293b;
-  border-radius: 26px;
-  padding: 32px 22px 20px;
-  text-align: center;
-  max-width: 760px;
-  width: 100%;
-  max-height: 88vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 14px 0 #1d4ed8, 0 20px 35px rgba(15, 23, 42, 0.5);
-}
-
-.alphabet-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
-  gap: 10px;
-  overflow-y: auto;
-  padding: 6px 4px 12px;
-  margin-bottom: 12px;
-}
-
-.alphabet-card {
-  background: #ffffff;
-  border: 3px solid #1e293b;
-  border-radius: 14px;
-  padding: 8px 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 4px 0 #cbd5e1;
-}
-
-.alphabet-sign-box {
-  width: 64px;
-  height: 80px; /* Proporção exata 4:5 das cartas do Membro 2 */
-  border-radius: 10px;
-  background: #bae6fd;
-  border: 2px solid #3b82f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.alphabet-sign-box img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.alphabet-fallback {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  font-size: 1.5rem;
-}
-
-.alphabet-fallback small {
-  font-size: 0.65rem;
-  font-weight: 800;
-  color: #1e3a8a;
-  text-transform: uppercase;
-}
-
-.alphabet-letter {
-  background: #facc15;
-  border: 2px solid #1e293b;
-  color: #1e293b;
-  font-family: 'Fredoka', sans-serif;
-  font-size: 1.05rem;
-  font-weight: 700;
-  padding: 1px 14px;
-  border-radius: 999px;
-}
-
-.alphabet-close-btn {
-  align-self: center;
-  min-width: 220px;
-}
-
-@media (max-width: 680px) {
-  .skins-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 /* Controles Touch (Ocultos no PC, visíveis no celular/tablet) */
 .touch-controls {
   display: none;
 }
 
 @media (pointer: coarse), (max-width: 768px) {
+  .screen {
+    padding: 6px;
+  }
+
+  #screen-game.active {
+    min-height: 100dvh;
+    justify-content: center;
+    padding: 4px 6px;
+  }
+
+  .hud-bar {
+    padding: 6px 8px;
+    gap: 5px;
+    justify-content: center;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .hud-pill {
+    padding: 3px 9px;
+    font-size: 0.8rem;
+    border-width: 2px;
+  }
+
+  .controls-bar {
+    padding: 8px 8px;
+    border-radius: 0 0 16px 16px;
+  }
+
   .controls-bar .hint {
     display: none;
+  }
+
+  .action-buttons {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .action-buttons .btn-3d {
+    flex: 1 1 auto;
+    padding: 8px 10px;
+    font-size: 0.84rem;
+    border-width: 2.5px;
+    white-space: nowrap;
   }
 
   .touch-controls {
@@ -776,8 +807,8 @@ canvas {
     background: #1e3a8a;
     border-left: 3px solid #1e293b;
     border-right: 3px solid #1e293b;
-    padding: 10px 18px;
-    gap: 12px;
+    padding: 10px 14px;
+    gap: 10px;
     user-select: none;
     -webkit-user-select: none;
     touch-action: manipulation;
@@ -787,22 +818,22 @@ canvas {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
   }
 
   .dpad-middle {
     display: flex;
-    gap: 4px;
+    gap: 6px;
   }
 
   .touch-btn {
-    width: 48px;
-    height: 44px;
+    width: 54px;
+    height: 48px;
     border: 3px solid #1e293b;
-    border-radius: 12px;
+    border-radius: 13px;
     background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%);
     color: #ffffff;
-    font-size: 1.15rem;
+    font-size: 1.25rem;
     font-weight: 800;
     box-shadow: 0 4px 0 #1d4ed8;
     cursor: pointer;
@@ -818,9 +849,29 @@ canvas {
   }
 
   .touch-action-btn {
-    padding: 14px 20px;
-    font-size: 1.05rem;
+    padding: 14px 16px;
+    font-size: 0.98rem;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (max-width: 680px) {
+  .game-logo {
+    font-size: 2.1rem;
+    margin-bottom: 14px;
+  }
+
+  .casual-panel {
+    padding: 26px 14px 18px;
+    border-radius: 20px;
+  }
+
+  .mode-btn {
+    min-width: 100%;
+  }
+
+  .skins-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
