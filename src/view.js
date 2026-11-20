@@ -25,11 +25,12 @@ class GameView {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, model.width, model.height);
 
+    // Proteção extra: enquanto pausado, não desenha letras nem cartas no Canvas
     if (model.isPaused) {
       ctx.fillStyle = "#1e3a8a";
       ctx.fillRect(0, 0, model.width, model.height);
       return;
-    }   
+    }
 
     const highlightedSlot = model.player.carriedCard
       ? model.getClosestColliding(model.slots.filter((s) => !s.isSpace && !s.placedCard), 2)
@@ -55,7 +56,7 @@ class GameView {
     // 3. BANDEJA INFERIOR AZUL SURDO (Baralho de Cartas)
     this.drawBottomTray(model);
 
-    // 4. OBSTÁCULOS MÓVEIS (Modo Difícil)
+    // 4. OBSTÁCULOS MÓVEIS
     this.drawObstacles(model.obstacles);
 
     // 5. CARTAS NO DECK E NOS SLOTS
@@ -64,8 +65,8 @@ class GameView {
       this.drawCard(card, highlightedCard === card);
     }
 
-    // 6. PERSONAGEM
-    this.drawPlayer(model.player);
+    // 6. PERSONAGEM (com a skin selecionada)
+    this.drawPlayer(model.player, model.selectedSkin);
 
     // 7. DICA DO MODO FÁCIL EMBAIXO DA CARTA
     if (model.difficulty === "easy" && highlightedCard) {
@@ -104,13 +105,11 @@ class GameView {
   drawObstacles(obstacles) {
     const ctx = this.ctx;
     for (const obs of obstacles) {
-      // Sombra no chão
       ctx.fillStyle = "rgba(15, 23, 42, 0.22)";
       ctx.beginPath();
       ctx.roundRect(obs.x, obs.y + 5, obs.width, obs.height, 999);
       ctx.fill();
 
-      // Corpo da barreira estilo casual cartoon (Laranja/Coral com borda escura)
       ctx.fillStyle = "#f97316";
       ctx.strokeStyle = "#1e293b";
       ctx.lineWidth = 3;
@@ -119,13 +118,11 @@ class GameView {
       ctx.fill();
       ctx.stroke();
 
-      // Brilho interno superior
       ctx.fillStyle = "#fdba74";
       ctx.beginPath();
       ctx.roundRect(obs.x + 8, obs.y + 4, obs.width - 16, 7, 999);
       ctx.fill();
 
-      // Ícone/Texto de alerta
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 12px Fredoka, Segoe UI, sans-serif";
       ctx.textAlign = "center";
@@ -324,69 +321,392 @@ class GameView {
     ctx.fillText(`Letra: ${card.letter}`, bx + badgeW / 2, by + 16);
   }
 
-  drawPlayer(player) {
+  drawPlayer(player, skinId = "default") {
     const ctx = this.ctx;
-    const img = this.images["player"];
 
-    // Efeito de piscada rápida após esbarrar em obstáculo
     if (player.invulnFrames > 0 && Math.floor(player.invulnFrames / 5) % 2 === 0) {
       ctx.save();
       ctx.globalAlpha = 0.45;
-      this.drawPlayerSprite(player, img);
+      this.drawPlayerSprite(player, skinId);
       ctx.restore();
       return;
     }
 
-    this.drawPlayerSprite(player, img);
+    this.drawPlayerSprite(player, skinId);
   }
 
-  drawPlayerSprite(player, img) {
+  drawPlayerSprite(player, skinId) {
     const ctx = this.ctx;
+    const cx = player.x + player.width / 2;
+    const cy = player.y + player.height / 2;
+    const radius = player.width / 2 - 2;
 
+    // Sombra no chão
     ctx.fillStyle = "rgba(15, 23, 42, 0.25)";
     ctx.beginPath();
-    ctx.ellipse(
-      player.x + player.width / 2,
-      player.y + player.height - 2,
-      player.width * 0.42,
-      7,
-      0,
-      0,
-      Math.PI * 2
-    );
+    ctx.ellipse(cx, player.y + player.height, player.width * 0.42, 6, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    if (img && img.loaded) {
-      ctx.drawImage(img, player.x, player.y, player.width, player.height);
+    this.drawSkinAvatar(ctx, cx, cy, radius, skinId);
+  }
+
+  // --- HELPERS DE CABELO, BARBA E ÓCULOS ---
+
+  // Cabelo feminino longo (prof1 e prof4)
+  drawLongHairBack(ctx, cx, cy, r, mainColor, strokeColor, shineColor) {
+    ctx.fillStyle = mainColor;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2.3;
+
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.92, cy - r * 0.35);
+    ctx.bezierCurveTo(
+      cx - r * 1.25, cy - r * 1.15,
+      cx + r * 1.25, cy - r * 1.15,
+      cx + r * 0.92, cy - r * 0.35
+    );
+    ctx.quadraticCurveTo(cx + r * 1.22, cy + r * 0.55, cx + r * 1.05, cy + r * 1.22);
+    ctx.quadraticCurveTo(cx + r * 0.55, cy + r * 1.32, cx, cy + r * 1.18);
+    ctx.quadraticCurveTo(cx - r * 0.55, cy + r * 1.32, cx - r * 1.05, cy + r * 1.22);
+    ctx.quadraticCurveTo(cx - r * 1.22, cy + r * 0.55, cx - r * 0.92, cy - r * 0.35);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = shineColor;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.95, cy + r * 0.1);
+    ctx.quadraticCurveTo(cx - r * 1.02, cy + r * 0.65, cx - r * 0.9, cy + r * 1.05);
+    ctx.moveTo(cx + r * 0.95, cy + r * 0.1);
+    ctx.quadraticCurveTo(cx + r * 1.02, cy + r * 0.65, cx + r * 0.9, cy + r * 1.05);
+    ctx.stroke();
+  }
+
+  drawLongHairFrontBangs(ctx, cx, cy, r, mainColor) {
+    ctx.fillStyle = mainColor;
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.86, cy - r * 0.32);
+    ctx.quadraticCurveTo(cx - r * 0.45, cy - r * 1.02, cx + r * 0.12, cy - r * 0.96);
+    ctx.quadraticCurveTo(cx - r * 0.35, cy - r * 0.52, cx - r * 0.86, cy - r * 0.32);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(cx + r * 0.86, cy - r * 0.32);
+    ctx.quadraticCurveTo(cx + r * 0.48, cy - r * 1.0, cx + r * 0.05, cy - r * 0.96);
+    ctx.quadraticCurveTo(cx + r * 0.4, cy - r * 0.55, cx + r * 0.86, cy - r * 0.32);
+    ctx.fill();
+  }
+
+  // Cabelo feminino médio loiro penteado para trás ("bonequinho" - prof8)
+  drawMediumBlondeHairBack(ctx, cx, cy, r) {
+    ctx.fillStyle = "#fcd34d";
+    ctx.strokeStyle = "#92400e";
+    ctx.lineWidth = 2.3;
+
+    // Volume atrás da cabeça descendo até a altura dos ombros (cy + 0.68r)
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.9, cy - r * 0.35);
+    ctx.bezierCurveTo(
+      cx - r * 1.18, cy - r * 1.15,
+      cx + r * 1.18, cy - r * 1.15,
+      cx + r * 0.9, cy - r * 0.35
+    );
+    ctx.quadraticCurveTo(cx + r * 1.24, cy + r * 0.25, cx + r * 1.02, cy + r * 0.66);
+    ctx.quadraticCurveTo(cx + r * 0.55, cy + r * 0.78, cx, cy + r * 0.68);
+    ctx.quadraticCurveTo(cx - r * 0.55, cy + r * 0.78, cx - r * 1.02, cy + r * 0.66);
+    ctx.quadraticCurveTo(cx - r * 1.24, cy + r * 0.25, cx - r * 0.9, cy - r * 0.35);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Fios loiros claros penteados para trás
+    ctx.strokeStyle = "#fef9c3";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.94, cy - r * 0.05);
+    ctx.quadraticCurveTo(cx - r * 1.05, cy + r * 0.28, cx - r * 0.9, cy + r * 0.55);
+    ctx.moveTo(cx + r * 0.94, cy - r * 0.05);
+    ctx.quadraticCurveTo(cx + r * 1.05, cy + r * 0.28, cx + r * 0.9, cy + r * 0.55);
+    ctx.stroke();
+  }
+
+  drawMediumBlondeHairFront(ctx, cx, cy, r) {
+    ctx.fillStyle = "#fcd34d";
+    ctx.strokeStyle = "#92400e";
+    ctx.lineWidth = 1.8;
+
+    // Mechas laterais puxadas para trás na linha da testa
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.92, cy - r * 0.18);
+    ctx.quadraticCurveTo(cx - r * 0.95, cy - r * 0.95, cx, cy - r * 1.04);
+    ctx.quadraticCurveTo(cx + r * 0.95, cy - r * 0.95, cx + r * 0.92, cy - r * 0.18);
+    ctx.quadraticCurveTo(cx + r * 0.76, cy - r * 0.64, cx + r * 0.2, cy - r * 0.72);
+    ctx.quadraticCurveTo(cx - r * 0.35, cy - r * 0.78, cx - r * 0.76, cy - r * 0.62);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Corte masculino curto natural com costeletas e linha da testa orgânica ("skywalker" e "eurística")
+  drawShortMenHair(ctx, cx, cy, r, fillColor, strokeColor, detailColor, isVeryShort = false) {
+    const topBump = isVeryShort ? r * 1.03 : r * 1.09;
+    const foreheadY = isVeryShort ? cy - r * 0.66 : cy - r * 0.6;
+
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2.1;
+
+    ctx.beginPath();
+    // Costeleta esquerda
+    ctx.moveTo(cx - r * 0.95, cy - r * 0.06);
+    ctx.lineTo(cx - r * 0.99, cy - r * 0.32);
+    // Topo arredondado natural
+    ctx.bezierCurveTo(
+      cx - r * 0.96, -topBump + cy - r * 0.12,
+      cx + r * 0.96, -topBump + cy - r * 0.12,
+      cx + r * 0.99, cy - r * 0.32
+    );
+    // Costeleta direita
+    ctx.lineTo(cx + r * 0.95, cy - r * 0.06);
+    ctx.lineTo(cx + r * 0.85, cy - r * 0.26);
+    // Linha natural da testa (leve risca lateral suave)
+    ctx.quadraticCurveTo(cx + r * 0.45, foreheadY - r * 0.06, cx + r * 0.15, foreheadY);
+    ctx.quadraticCurveTo(cx - r * 0.38, foreheadY - r * 0.05, cx - r * 0.85, cy - r * 0.26);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Textura sutil de fios curtos
+    ctx.strokeStyle = detailColor;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    if (isVeryShort) {
+      for (let off = -0.45; off <= 0.45; off += 0.22) {
+        ctx.moveTo(cx + r * off, cy - r * 0.88);
+        ctx.lineTo(cx + r * (off + 0.03), cy - r * 0.77);
+      }
     } else {
-      const cx = player.x + player.width / 2;
-      const cy = player.y + player.height / 2;
-
-      ctx.fillStyle = "#2563eb";
-      ctx.strokeStyle = "#1e293b";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(cx, cy, player.width / 2 - 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = "#facc15";
-      ctx.beginPath();
-      ctx.arc(cx, cy - 4, player.width / 2 - 4, Math.PI, 0);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(cx - 7, cy + 3, 4.5, 0, Math.PI * 2);
-      ctx.arc(cx + 7, cy + 3, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = "#1e293b";
-      ctx.beginPath();
-      ctx.arc(cx - 6, cy + 3, 2.2, 0, Math.PI * 2);
-      ctx.arc(cx + 8, cy + 3, 2.2, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(cx - r * 0.45, cy - r * 0.86);
+      ctx.quadraticCurveTo(cx - r * 0.1, cy - r * 0.92, cx + r * 0.3, cy - r * 0.82);
+      ctx.moveTo(cx - r * 0.25, cy - r * 0.75);
+      ctx.quadraticCurveTo(cx + r * 0.1, cy - r * 0.8, cx + r * 0.48, cy - r * 0.72);
     }
+    ctx.stroke();
+  }
+
+  drawGlasses(ctx, cx, eyeY, eyeOffsetX, r) {
+    const lensW = r * 0.64;
+    const lensH = r * 0.46;
+    const lensY = eyeY - lensH / 2;
+    const leftLensX = cx - eyeOffsetX - lensW / 2;
+    const rightLensX = cx + eyeOffsetX - lensW / 2;
+
+    ctx.fillStyle = "rgba(224, 242, 254, 0.38)";
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 2.2;
+
+    ctx.beginPath();
+    ctx.roundRect(leftLensX, lensY, lensW, lensH, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.roundRect(rightLensX, lensY, lensW, lensH, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(leftLensX + lensW, eyeY - 1);
+    ctx.lineTo(rightLensX, eyeY - 1);
+    ctx.moveTo(leftLensX, eyeY - 1);
+    ctx.lineTo(cx - r * 0.92, eyeY - 3);
+    ctx.moveTo(rightLensX + lensW, eyeY - 1);
+    ctx.lineTo(cx + r * 0.92, eyeY - 3);
+    ctx.stroke();
+  }
+
+  drawTopete(ctx, cx, cy, r, fillColor, strokeColor) {
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2.2;
+
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.82, cy - r * 0.48);
+    ctx.quadraticCurveTo(cx - r * 0.95, cy - r * 1.15, cx - r * 0.25, cy - r * 1.12);
+    ctx.quadraticCurveTo(cx + r * 0.15, cy - r * 1.48, cx + r * 0.68, cy - r * 1.25);
+    ctx.quadraticCurveTo(cx + r * 0.95, cy - r * 0.95, cx + r * 0.84, cy - r * 0.48);
+    ctx.quadraticCurveTo(cx + r * 0.32, cy - r * 0.78, cx - r * 0.15, cy - r * 0.7);
+    ctx.quadraticCurveTo(cx - r * 0.55, cy - r * 0.74, cx - r * 0.82, cy - r * 0.48);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Barba ralinha (para o "skywalker")
+  drawLightBeard(ctx, cx, cy, r) {
+    ctx.save();
+    // Sombra rala no queixo e maxilar inferior
+    ctx.fillStyle = "rgba(148, 163, 184, 0.45)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.97, Math.PI * 0.22, Math.PI * 0.78);
+    ctx.quadraticCurveTo(cx, cy + r * 0.66, cx + r * 0.77, cy + r * 0.62);
+    ctx.closePath();
+    ctx.fill();
+
+    // Pelinhos ralos na barba e bigode fino
+    ctx.strokeStyle = "#64748b";
+    ctx.lineWidth = 1.4;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    // Bigode fino e curto
+    ctx.moveTo(cx - r * 0.26, cy + r * 0.34);
+    ctx.quadraticCurveTo(cx, cy + r * 0.29, cx + r * 0.26, cy + r * 0.34);
+    // Fios ralos no queixo
+    for (let a = 0.28; a <= 0.72; a += 0.088) {
+      const ang = Math.PI * a;
+      ctx.moveTo(cx + Math.cos(ang) * r * 0.74, cy + Math.sin(ang) * r * 0.74);
+      ctx.lineTo(cx + Math.cos(ang) * r * 0.92, cy + Math.sin(ang) * r * 0.92);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Barba curta bem aparada e mais baixa (para "matlab" e "boss final")
+  drawShortBeard(ctx, cx, cy, r, fillColor, strokeColor) {
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1.8;
+
+    // Fica concentrada só na borda inferior do queixo/maxilar
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.76, cy + r * 0.38);
+    ctx.quadraticCurveTo(cx - r * 0.38, cy + r * 0.64, cx, cy + r * 0.6);
+    ctx.quadraticCurveTo(cx + r * 0.38, cy + r * 0.64, cx + r * 0.76, cy + r * 0.38);
+    ctx.arc(cx, cy, r, 0.4, Math.PI - 0.4, false);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Bigode fino integrado
+    ctx.beginPath();
+    ctx.roundRect(cx - r * 0.3, cy + r * 0.36, r * 0.6, r * 0.12, 4);
+    ctx.fill();
+  }
+
+  // Método principal de renderização de todas as skins
+  drawSkinAvatar(ctx, cx, cy, r, skinId) {
+    ctx.save();
+
+    // 1. CAMADA DE TRÁS (Cabelos médios/longos)
+    if (skinId === "prof1") {
+      this.drawLongHairBack(ctx, cx, cy, r, "#18181b", "#09090b", "#3f3f46");
+    } else if (skinId === "prof4") {
+      this.drawLongHairBack(ctx, cx, cy, r, "#5c3317", "#3b1d08", "#854d27");
+    } else if (skinId === "prof8") {
+      this.drawMediumBlondeHairBack(ctx, cx, cy, r);
+    }
+
+    // 2. CORPO BASE (Bolinha inteira amarela)
+    ctx.fillStyle = "#facc15";
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Brilho suave no topo da esfera
+    ctx.fillStyle = "rgba(254, 249, 195, 0.5)";
+    ctx.beginPath();
+    ctx.ellipse(cx - r * 0.25, cy - r * 0.42, r * 0.3, r * 0.14, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 3. OLHOS EXPRESSIVOS
+    const hasBeard = skinId === "prof2" || skinId === "prof7" || skinId === "prof9";
+    const eyeY = hasBeard ? cy - r * 0.08 : cy - r * 0.02;
+    const eyeOffsetX = r * 0.32;
+    const eyeR = Math.max(3, r * 0.19);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(cx - eyeOffsetX, eyeY, eyeR, 0, Math.PI * 2);
+    ctx.arc(cx + eyeOffsetX, eyeY, eyeR, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#1e293b";
+    ctx.beginPath();
+    ctx.arc(cx - eyeOffsetX + 0.8, eyeY, eyeR * 0.52, 0, Math.PI * 2);
+    ctx.arc(cx + eyeOffsetX + 0.8, eyeY, eyeR * 0.52, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4. DETALHES DA FRENTE POR PROFESSOR
+    switch (skinId) {
+      case "prof1": // "parsec" - cabelo longo preto + óculos
+        this.drawLongHairFrontBangs(ctx, cx, cy, r, "#18181b");
+        this.drawGlasses(ctx, cx, eyeY, eyeOffsetX, r);
+        break;
+
+      case "prof2": // "skywalker" - cabelo curto natural e barba ralinha grisalhos
+        this.drawShortMenHair(ctx, cx, cy, r, "#cbd5e1", "#475569", "#f8fafc", false);
+        this.drawLightBeard(ctx, cx, cy, r);
+        break;
+
+      case "prof3": // "eurística" - cabelo preto bem curto natural + óculos
+        this.drawShortMenHair(ctx, cx, cy, r, "#18181b", "#09090b", "#52525b", true);
+        this.drawGlasses(ctx, cx, eyeY, eyeOffsetX, r);
+        break;
+
+      case "prof4": // "já fizeram?" - cabelo longo castanho + óculos
+        this.drawLongHairFrontBangs(ctx, cx, cy, r, "#5c3317");
+        this.drawGlasses(ctx, cx, eyeY, eyeOffsetX, r);
+        break;
+
+      case "prof5": // "cachaça" - topete preto + óculos
+        this.drawTopete(ctx, cx, cy, r, "#18181b", "#09090b");
+        this.drawGlasses(ctx, cx, eyeY, eyeOffsetX, r);
+        break;
+
+      case "prof6": // "capacitivo" - cabelo preto curto-médio + óculos
+        ctx.fillStyle = "#18181b";
+        ctx.strokeStyle = "#09090b";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(cx - r * 0.94, cy - r * 0.25);
+        ctx.quadraticCurveTo(cx - r * 1.04, cy - r * 1.05, cx, cy - r * 1.08);
+        ctx.quadraticCurveTo(cx + r * 1.04, cy - r * 1.05, cx + r * 0.94, cy - r * 0.25);
+        ctx.quadraticCurveTo(cx + r * 0.65, cy - r * 0.56, cx + r * 0.25, cy - r * 0.54);
+        ctx.quadraticCurveTo(cx - r * 0.15, cy - r * 0.65, cx - r * 0.55, cy - r * 0.52);
+        ctx.quadraticCurveTo(cx - r * 0.78, cy - r * 0.48, cx - r * 0.94, cy - r * 0.25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        this.drawGlasses(ctx, cx, eyeY, eyeOffsetX, r);
+        break;
+
+      case "prof7": // "matlab" - topete preto + barba curta aparada
+        this.drawTopete(ctx, cx, cy, r, "#18181b", "#09090b");
+        this.drawShortBeard(ctx, cx, cy, r, "#18181b", "#09090b");
+        break;
+
+      case "prof8": // "bonequinho" - cabelo loiro médio penteado para trás
+        this.drawMediumBlondeHairFront(ctx, cx, cy, r);
+        break;
+
+      case "prof9": // "boss final" - topete grisalho + óculos + barba grisalha
+        this.drawTopete(ctx, cx, cy, r, "#cbd5e1", "#475569");
+        this.drawShortBeard(ctx, cx, cy, r, "#cbd5e1", "#475569");
+        this.drawGlasses(ctx, cx, eyeY, eyeOffsetX, r);
+        break;
+    }
+
+    ctx.restore();
+  }
+
+  renderSkinPreview(previewCanvas, skinId) {
+    const pCtx = previewCanvas.getContext("2d");
+    pCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    this.drawSkinAvatar(pCtx, previewCanvas.width / 2, previewCanvas.height / 2 + 2, 16, skinId);
   }
 }

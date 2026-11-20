@@ -22,12 +22,42 @@ class GameModel {
       "COMUNIDADE"
     ];
 
+    // Catálogo de Skins (Base + 9 Professores = 10 cards, 5 por fileira)
+    this.skins = [
+      { id: "default", name: "Padrão", unlockScore: 0 },
+      { id: "prof1", name: '"Parsec"', unlockScore: 200 },
+      { id: "prof2", name: '"Skywalker"', unlockScore: 450 },
+      { id: "prof3", name: '"Eurística"', unlockScore: 700 },
+      { id: "prof4", name: '"Já fizeram?"', unlockScore: 1000 },
+      { id: "prof5", name: '"Cachaça"', unlockScore: 1350 },
+      { id: "prof6", name: '"Capacitivo"', unlockScore: 1750 },
+      { id: "prof8", name: '"Bonequinho"', unlockScore: 2200 },
+      { id: "prof7", name: '"Pai de Meninas"', unlockScore: 2700 },
+      { id: "prof9", name: '"Boss Final"', unlockScore: 3300 }
+    ];
+
     this.shuffledPhrases = [];
     this.alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     this.difficulty = "easy"; // "easy" | "hard"
     this.highScore = Number(localStorage.getItem("librasQuestHighScore")) || 0;
 
+    const savedSkin = localStorage.getItem("librasQuestSelectedSkin") || "default";
+    this.selectedSkin = this.isSkinUnlocked(savedSkin) ? savedSkin : "default";
+
     this.resetGame();
+  }
+
+  isSkinUnlocked(skinId) {
+    const skin = this.skins.find((s) => s.id === skinId);
+    if (!skin) return false;
+    return this.highScore >= skin.unlockScore;
+  }
+
+  selectSkin(skinId) {
+    if (!this.isSkinUnlocked(skinId)) return false;
+    this.selectedSkin = skinId;
+    localStorage.setItem("librasQuestSelectedSkin", skinId);
+    return true;
   }
 
   setDifficulty(mode) {
@@ -50,6 +80,7 @@ class GameModel {
     this.shuffledPhrases = this.shufflePhrases();
     this.timeLeft = 300;
     this.phraseStartTime = 300;
+    this.runStartHighScore = this.highScore;
     this.isGameOver = false;
     this.isChecking = false;
     this.isPaused = false;

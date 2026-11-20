@@ -10,6 +10,7 @@ class GameController {
 
     this.bindEvents();
     this.updateHUD();
+    this.renderSkinsMenu();
   }
 
   bindEvents() {
@@ -45,7 +46,6 @@ class GameController {
         e.preventDefault();
       }
 
-      // Tecla ESC pausa/despausa quando estiver na tela do jogo
       if (e.code === "Escape" && document.getElementById("screen-game").classList.contains("active")) {
         this.handleTogglePause();
         return;
@@ -64,6 +64,54 @@ class GameController {
     window.addEventListener("keyup", (e) => {
       this.keys[e.code] = false;
     });
+  }
+
+  renderSkinsMenu() {
+    const grid = document.getElementById("skins-grid");
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    for (const skin of this.model.skins) {
+      const unlocked = this.model.isSkinUnlocked(skin.id);
+      const isSelected = this.model.selectedSkin === skin.id;
+
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = `skin-card${unlocked ? "" : " locked"}${isSelected ? " selected" : ""}`;
+
+      const preview = document.createElement("canvas");
+      preview.width = 58;
+      preview.height = 54;
+      preview.className = "skin-preview";
+      this.view.renderSkinPreview(preview, skin.id);
+
+      const title = document.createElement("span");
+      title.className = "skin-title";
+      title.textContent = unlocked ? skin.name : `🔒 ${skin.name}`;
+
+      const status = document.createElement("span");
+      status.className = `skin-status ${
+        isSelected ? "status-equipped" : unlocked ? "status-unlocked" : "status-locked"
+      }`;
+      status.textContent = isSelected
+        ? "✔ Equipada"
+        : unlocked
+        ? "Selecionar"
+        : `${skin.unlockScore} pts`;
+
+      card.appendChild(preview);
+      card.appendChild(title);
+      card.appendChild(status);
+
+      if (unlocked) {
+        card.addEventListener("click", () => {
+          this.model.selectSkin(skin.id);
+          this.renderSkinsMenu();
+        });
+      }
+
+      grid.appendChild(card);
+    }
   }
 
   handleTogglePause() {
@@ -102,6 +150,7 @@ class GameController {
     cancelAnimationFrame(this.animationFrameId);
     this.syncPauseUI();
     this.updateHUD();
+    this.renderSkinsMenu();
     this.switchScreen("screen-start");
   }
 
@@ -145,12 +194,26 @@ class GameController {
     clearInterval(this.timerInterval);
     cancelAnimationFrame(this.animationFrameId);
 
+    const newlyUnlocked = this.model.skins.filter(
+      (s) => s.unlockScore > this.model.runStartHighScore && this.model.highScore >= s.unlockScore
+    );
+
+    const unlockBanner = document.getElementById("unlock-banner");
+    if (newlyUnlocked.length > 0) {
+      const names = newlyUnlocked.map((s) => s.name).join(", ");
+      unlockBanner.textContent = `🎉 Nova Skin Desbloqueada: ${names}!`;
+      unlockBanner.classList.remove("hidden");
+    } else {
+      unlockBanner.classList.add("hidden");
+    }
+
     const modeLabel = this.model.difficulty === "hard" ? "🔥 Difícil (1.5x)" : "🟢 Fácil";
     document.getElementById("final-mode").textContent = modeLabel;
     document.getElementById("final-score").textContent = this.model.score;
     document.getElementById("final-phrases").textContent = this.model.phrasesCompleted;
     document.getElementById("final-highscore").textContent = this.model.highScore;
 
+    this.renderSkinsMenu();
     this.switchScreen("screen-gameover");
   }
 

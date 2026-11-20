@@ -35,15 +35,14 @@
         <h3>Como Jogar</h3>
         <ul>
           <li><span class="key-badge">Setas / WASD</span> Movimente o personagem pela arena.</li>
-          <li><span class="key-badge">Espaço</span> Pegue uma carta em Libras no baralho e coloque abaixo da letra certa.</li>
-          <li><span class="key-badge">Enter</span> Confere a frase. Quanto mais rápido acertar, maior o bônus!</li>
-          <li><span class="key-badge">Esc</span> Pausa a partida a qualquer momento.</li>
+          <li><span class="key-badge">Espaço</span> Pegue uma carta em Libras e encaixe abaixo da letra certa.</li>
+          <li><span class="key-badge">Enter</span> Confere a frase  |  <span class="key-badge">Esc</span> Pausa a partida.</li>
         </ul>
       </div>
 
       <!-- Seletor de Dificuldade -->
       <div class="difficulty-box">
-        <span class="difficulty-label">Escolha o Modo de Jogo:</span>
+        <span class="section-label">Modo de Jogo:</span>
         <div class="difficulty-buttons">
           <button type="button" id="btn-mode-easy" class="mode-btn selected" data-mode="easy">
             🟢 Fácil <small>(Mostra letra + 1 obstáculo)</small>
@@ -52,6 +51,12 @@
             🔥 Difícil <small>(Sem dica + 2 obstáculos • 1.5x pts)</small>
           </button>
         </div>
+      </div>
+
+      <!-- Seletor de Skins (Professores por Semestre) -->
+      <div class="skins-box">
+        <span class="section-label">Skins dos Professores (Desbloqueie batendo recordes!):</span>
+        <div id="skins-grid" class="skins-grid"></div>
       </div>
 
       <div class="record-pill">🏆 Recorde Atual: <strong id="start-highscore">0</strong> pts</div>
@@ -111,6 +116,8 @@
     <div class="casual-panel">
       <div class="panel-header-pill">⏱️ FIM DE PARTIDA</div>
       <p class="subtitle">Confira o resultado do seu desafio em Libras:</p>
+
+      <div id="unlock-banner" class="unlock-banner hidden"></div>
 
       <div class="results-box">
         <div class="result-row">
