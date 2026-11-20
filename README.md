@@ -1,0 +1,1 @@
+# Jogo-em-Libras---Trabalho-em-Grupo-SCOM
