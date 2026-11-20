@@ -3,7 +3,6 @@ class GameView {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
 
-    // Pré-carregamento das imagens de assets/imagens/
     this.images = {};
     this.loadImage("player", "assets/imagens/personagem.png");
 
@@ -26,6 +25,15 @@ class GameView {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, model.width, model.height);
 
+    // Identifica o único slot ou carta-alvo mais próximo para destacar
+    const highlightedSlot = model.player.carriedCard
+      ? model.getClosestColliding(model.slots.filter((s) => !s.isSpace && !s.placedCard), 2)
+      : null;
+
+    const highlightedCard = !model.player.carriedCard
+      ? model.getClosestColliding(model.deckCards.filter((c) => !c.isPlaced), 2)
+      : null;
+
     // 1. ZONA SUPERIOR (Frase e Slots)
     ctx.fillStyle = "#1e293b";
     ctx.fillRect(0, 0, model.width, 160);
@@ -35,16 +43,13 @@ class GameView {
     ctx.textAlign = "center";
     ctx.fillText(model.feedbackMessage, model.width / 2, 24);
 
-    // Desenhar letras da frase e slots logo abaixo
     for (const slot of model.slots) {
       if (slot.isSpace) continue;
 
-      // Letra alvo no topo
       ctx.fillStyle = "#facc15";
       ctx.font = "bold 24px Segoe UI, sans-serif";
       ctx.fillText(slot.char, slot.x + slot.width / 2, slot.y - 10);
 
-      // Caixa do Slot
       let borderColor = "#64748b";
       let bgColor = "#0f172a";
 
@@ -54,7 +59,7 @@ class GameView {
       } else if (slot.status === "wrong") {
         borderColor = "#ef4444";
         bgColor = "rgba(239, 68, 68, 0.25)";
-      } else if (model.checkCollision(model.player, slot, 18)) {
+      } else if (highlightedSlot === slot) {
         borderColor = "#facc15";
       }
 
@@ -71,7 +76,6 @@ class GameView {
     ctx.fillStyle = "#0f172a";
     ctx.fillRect(0, 160, model.width, 240);
 
-    // Linha divisória do Deck Inferior
     ctx.strokeStyle = "#334155";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -87,16 +91,13 @@ class GameView {
     ctx.font = "13px Segoe UI, sans-serif";
     ctx.fillText("BARALHO DE SINAIS EM LIBRAS", model.width / 2, 416);
 
-    // Desenhar cartas não carregadas (no deck ou já encaixadas nos slots)
     for (const card of model.deckCards) {
       if (model.player.carriedCard && model.player.carriedCard.id === card.id) continue;
-      this.drawCard(card, model.checkCollision(model.player, card, 12) && !card.isPlaced);
+      this.drawCard(card, highlightedCard === card);
     }
 
-    // Desenhar Personagem
     this.drawPlayer(model.player);
 
-    // Desenhar carta sendo carregada pelo personagem (por cima de tudo)
     if (model.player.carriedCard) {
       this.drawCard(model.player.carriedCard, true);
     }
@@ -117,7 +118,6 @@ class GameView {
     if (img && img.loaded) {
       ctx.drawImage(img, card.x + 4, card.y + 4, card.width - 8, card.height - 8);
     } else {
-      // Fallback visual enquanto as imagens PNG do Membro 2 não são adicionadas
       ctx.fillStyle = "#0284c7";
       ctx.font = "bold 11px Segoe UI, sans-serif";
       ctx.textAlign = "center";
@@ -140,7 +140,6 @@ class GameView {
     if (img && img.loaded) {
       ctx.drawImage(img, player.x, player.y, player.width, player.height);
     } else {
-      // Fallback visual do personagem
       ctx.fillStyle = "#facc15";
       ctx.beginPath();
       ctx.arc(

@@ -3,7 +3,6 @@ class GameModel {
     this.width = canvasWidth;
     this.height = canvasHeight;
 
-    // Lista de frases ordenadas por dificuldade progressiva
     this.phrases = [
       "AMOR",
       "VIDA",
@@ -33,6 +32,7 @@ class GameModel {
     this.phrasesCompleted = 0;
     this.currentPhraseIndex = 0;
     this.timeLeft = 300; // 5 minutos (300 segundos)
+    this.phraseStartTime = 300;
     this.isGameOver = false;
     this.isChecking = false;
     this.feedbackMessage = "Pegue a carta em Libras correspondente à letra!";
@@ -54,6 +54,7 @@ class GameModel {
   loadPhrase(index) {
     const phrase = this.phrases[index % this.phrases.length];
     this.currentPhrase = phrase;
+    this.phraseStartTime = this.timeLeft;
     this.isChecking = false;
     this.player.carriedCard = null;
 
@@ -83,12 +84,12 @@ class GameModel {
           width: slotW,
           height: slotH,
           placedCard: null,
-          status: "empty" // empty | filled | correct | wrong
+          status: "empty"
         });
       }
     }
 
-    // 2. Montar o Deck da Zona Inferior (letras necessárias + letras extras embaralhadas)
+    // 2. Montar o Deck da Zona Inferior
     const extraCount = Math.min(4, 12 - requiredLetters.length);
     const poolLetters = [...requiredLetters];
 
@@ -97,7 +98,6 @@ class GameModel {
       poolLetters.push(randomChar);
     }
 
-    // Embaralhar cartas
     for (let i = poolLetters.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [poolLetters[i], poolLetters[j]] = [poolLetters[j], poolLetters[i]];
@@ -134,20 +134,18 @@ class GameModel {
     if (keys["ArrowLeft"] || keys["KeyA"]) this.player.x -= this.player.speed;
     if (keys["ArrowRight"] || keys["KeyD"]) this.player.x += this.player.speed;
 
-    // Limites da tela (abaixo do cabeçalho superior até o deck inferior)
-    const minY = 145;
+    const minY = 110;
     const maxY = this.height - this.player.height - 10;
     this.player.x = Math.max(10, Math.min(this.width - this.player.width - 10, this.player.x));
     this.player.y = Math.max(minY, Math.min(maxY, this.player.y));
 
-    // Se estiver carregando uma carta, ela acompanha o personagem
     if (this.player.carriedCard) {
       this.player.carriedCard.x = this.player.x + (this.player.width - this.player.carriedCard.width) / 2;
       this.player.carriedCard.y = this.player.y - 36;
     }
   }
 
-  checkCollision(a, b, margin = 8) {
+  checkCollision(a, b, margin = 2) {
     return (
       a.x - margin < b.x + b.width &&
       a.x + a.width + margin > b.x &&
@@ -156,46 +154,72 @@ class GameModel {
     );
   }
 
+  // Retorna APENAS o objeto mais próximo do centro do personagem entre os que estão colidindo
+  getClosestColliding(items, margin = 2) {
+    const pCenterX = this.player.x + this.player.width / 2;
+    const pCenterY = this.player.y + this.player.height / 2;
+
+    let closestItem = null;
+    let minDistance = Infinity;
+
+    for (const item of items) {
+      if (this.checkCollision(this.player, item, margin)) {
+        const iCenterX = item.x + item.width / 2;
+        const iCenterY = item.y + item.height / 2;
+        const dist = Math.hypot(pCenterX - iCenterX, pCenterY - iCenterY);
+
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestItem = item;
+        }
+      }
+    }
+
+    return closestItem;
+  }
+
   interact() {
     if (this.isGameOver || this.isChecking) return;
 
-    // Caso 1: Jogador NÃO está segurando carta -> tenta pegar do deck ou retirar de um slot
     if (!this.player.carriedCard) {
-      // Tenta pegar carta livre no deck
-      for (const card of this.deckCards) {
-        if (!card.isPlaced && this.checkCollision(this.player, card, 12)) {
-          this.player.carriedCard = card;
-          this.feedbackMessage = "Leve a carta até o espaço abaixo da letra e aperte Espaço!";
-          return;
-        }
+      // 1. Pega apenas a carta livre mais próxima no deck
+      const availableCards = this.deckCards.filter((c) => !c.isPlaced);
+      const targetCard = this.getClosestColliding(availableCards, 2);
+
+      if (targetCard) {
+        this.player.carriedCard = targetCard;
+        this.feedbackMessage = "Leve a carta até o espaço abaixo da letra e aperte Espaço!";
+        return;
       }
 
-      // Tenta retirar carta já colocada em um slot (caso queira corrigir)
-      for (const slot of this.slots) {
-        if (!slot.isSpace && slot.placedCard && this.checkCollision(this.player, slot, 16)) {
-          const card = slot.placedCard;
-          slot.placedCard = null;
-          slot.status = "empty";
-          card.isPlaced = false;
-          this.player.carriedCard = card;
-          this.feedbackMessage = "Carta retirada do espaço. Reposicione ou solte no deck.";
-          return;
-        }
+      // 2. Ou retira apenas a carta do slot preenchido mais próximo
+      const filledSlots = this.slots.filter((s) => !s.isSpace && s.placedCard);
+      const targetSlot = this.getClosestColliding(filledSlots, 2);
+
+      if (targetSlot) {
+        const card = targetSlot.placedCard;
+        targetSlot.placedCard = null;
+        targetSlot.status = "empty";
+        card.isPlaced = false;
+        this.player.carriedCard = card;
+        this.feedbackMessage = "Carta retirada do espaço. Reposicione ou solte no deck.";
+        return;
       }
     } else {
-      // Caso 2: Jogador ESTÁ segurando carta -> tenta encaixar em um slot vazio
-      for (const slot of this.slots) {
-        if (!slot.isSpace && !slot.placedCard && this.checkCollision(this.player, slot, 18)) {
-          const card = this.player.carriedCard;
-          card.x = slot.x + (slot.width - card.width) / 2;
-          card.y = slot.y + (slot.height - card.height) / 2;
-          card.isPlaced = true;
-          slot.placedCard = card;
-          slot.status = "filled";
-          this.player.carriedCard = null;
-          this.feedbackMessage = "Carta posicionada! Complete a frase e aperte Enter para verificar.";
-          return;
-        }
+      // Encaixa apenas no slot vazio mais próximo
+      const emptySlots = this.slots.filter((s) => !s.isSpace && !s.placedCard);
+      const targetSlot = this.getClosestColliding(emptySlots, 2);
+
+      if (targetSlot) {
+        const card = this.player.carriedCard;
+        card.x = targetSlot.x + (targetSlot.width - card.width) / 2;
+        card.y = targetSlot.y + (targetSlot.height - card.height) / 2;
+        card.isPlaced = true;
+        targetSlot.placedCard = card;
+        targetSlot.status = "filled";
+        this.player.carriedCard = null;
+        this.feedbackMessage = "Carta posicionada! Complete a frase e aperte Enter para verificar.";
+        return;
       }
 
       // Se apertar Espaço longe dos slots, devolve a carta para o deck
@@ -230,7 +254,11 @@ class GameModel {
       }
     }
 
-    const earnedPoints = correctCount * 20 + (correctCount === letterSlots.length ? 50 : 0);
+    const isPerfect = correctCount === letterSlots.length;
+    const timeSpent = Math.max(0, this.phraseStartTime - this.timeLeft);
+    const speedBonus = isPerfect ? Math.max(0, 30 - timeSpent) * 2 : 0;
+    const earnedPoints = correctCount * 20 + (isPerfect ? 50 : 0) + speedBonus;
+
     this.score += earnedPoints;
 
     if (this.score > this.highScore) {
@@ -238,9 +266,9 @@ class GameModel {
       localStorage.setItem("librasQuestHighScore", String(this.highScore));
     }
 
-    if (correctCount === letterSlots.length) {
+    if (isPerfect) {
       this.phrasesCompleted++;
-      this.feedbackMessage = `✅ Perfeito! +${earnedPoints} pontos! Carregando próxima frase...`;
+      this.feedbackMessage = `✅ Perfeito! +${earnedPoints} pts (Bônus agilidade: +${speedBonus})!`;
     } else {
       this.feedbackMessage = `Você acertou ${correctCount}/${letterSlots.length} letras (+${earnedPoints} pts). Próxima frase...`;
     }

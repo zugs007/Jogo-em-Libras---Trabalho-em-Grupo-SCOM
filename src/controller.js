@@ -13,16 +13,15 @@ class GameController {
   }
 
   bindEvents() {
-    // Botões de navegação entre telas
     document.getElementById("btn-start").addEventListener("click", () => this.startGame());
     document.getElementById("btn-restart").addEventListener("click", () => this.startGame());
+    document.getElementById("btn-home").addEventListener("click", () => this.goHome());
     document.getElementById("btn-finish").addEventListener("click", () => this.endGame());
     document.getElementById("btn-verify").addEventListener("click", () => {
       this.model.verifyPhrase(() => this.updateHUD());
       this.updateHUD();
     });
 
-    // Teclado
     window.addEventListener("keydown", (e) => {
       this.keys[e.code] = true;
 
@@ -46,6 +45,11 @@ class GameController {
   switchScreen(screenId) {
     document.querySelectorAll(".screen").forEach((el) => el.classList.remove("active"));
     document.getElementById(screenId).classList.add("active");
+  }
+
+  goHome() {
+    this.updateHUD();
+    this.switchScreen("screen-start");
   }
 
   startGame() {

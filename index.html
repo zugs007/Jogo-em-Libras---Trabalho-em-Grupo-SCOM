@@ -18,7 +18,7 @@
         <ul>
           <li><strong>Setas (↑ ↓ ← →) ou WASD:</strong> Movimente o personagem pela arena.</li>
           <li><strong>Espaço:</strong> Pegue uma carta em Libras na parte inferior e coloque no espaço vazio abaixo da letra correspondente.</li>
-          <li><strong>Enter ou Botão Verificar:</strong> Confere a frase e soma seus pontos.</li>
+          <li><strong>Enter ou Botão Verificar:</strong> Confere a frase e soma seus pontos (quanto mais rápido acertar, maior o bônus!).</li>
           <li><strong>Tempo:</strong> Você tem <strong>5 minutos</strong> para fazer a maior pontuação!</li>
         </ul>
       </div>
@@ -53,7 +53,7 @@
   <!-- TELA 3: FIM DE JOGO -->
   <section id="screen-gameover" class="screen">
     <div class="card-container">
-      <h1>⏱️ Tempo Esgotado!</h1>
+      <h1>⏱️ Partida Encerrada!</h1>
       <p class="subtitle">Confira o seu desempenho na partida:</p>
 
       <div class="results-box">
@@ -62,7 +62,10 @@
         <p>Recorde Pessoal: <strong id="final-highscore">0</strong> pts</p>
       </div>
 
-      <button id="btn-restart" class="btn-primary">Jogar Novamente</button>
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <button id="btn-restart" class="btn-primary">Jogar Novamente</button>
+        <button id="btn-home" class="btn-secondary">Voltar ao Início</button>
+      </div>
     </div>
   </section>
 
