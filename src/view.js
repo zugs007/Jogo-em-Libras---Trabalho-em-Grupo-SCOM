@@ -543,55 +543,68 @@ class GameView {
     ctx.stroke();
   }
 
-  // Barba ralinha (para o "skywalker")
+  // Barba ralinha com pelinhos curtos (para o "skywalker")
   drawLightBeard(ctx, cx, cy, r) {
     ctx.save();
     // Sombra rala no queixo e maxilar inferior
-    ctx.fillStyle = "rgba(148, 163, 184, 0.45)";
+    ctx.fillStyle = "rgba(148, 163, 184, 0.38)";
     ctx.beginPath();
     ctx.arc(cx, cy, r * 0.97, Math.PI * 0.22, Math.PI * 0.78);
     ctx.quadraticCurveTo(cx, cy + r * 0.66, cx + r * 0.77, cy + r * 0.62);
     ctx.closePath();
     ctx.fill();
 
-    // Pelinhos ralos na barba e bigode fino
+    // Pelinhos ralos (traços curtos inclinados para não parecer boca)
     ctx.strokeStyle = "#64748b";
-    ctx.lineWidth = 1.4;
+    ctx.lineWidth = 1.3;
     ctx.lineCap = "round";
     ctx.beginPath();
-    // Bigode fino e curto
-    ctx.moveTo(cx - r * 0.26, cy + r * 0.34);
-    ctx.quadraticCurveTo(cx, cy + r * 0.29, cx + r * 0.26, cy + r * 0.34);
-    // Fios ralos no queixo
+
+    // Bigode ralinho curvando para baixo
+    const mustacheOffsets = [-0.3, -0.2, -0.1, 0.1, 0.2, 0.3];
+    for (const off of mustacheOffsets) {
+      const mx = cx + r * off;
+      const my = cy + r * (0.28 + Math.abs(off) * 0.35);
+      ctx.moveTo(mx, my);
+      ctx.lineTo(mx + r * off * 0.18, my + r * 0.09);
+    }
+
+    // Fios ralos no contorno do queixo
     for (let a = 0.28; a <= 0.72; a += 0.088) {
       const ang = Math.PI * a;
-      ctx.moveTo(cx + Math.cos(ang) * r * 0.74, cy + Math.sin(ang) * r * 0.74);
+      ctx.moveTo(cx + Math.cos(ang) * r * 0.75, cy + Math.sin(ang) * r * 0.75);
       ctx.lineTo(cx + Math.cos(ang) * r * 0.92, cy + Math.sin(ang) * r * 0.92);
     }
     ctx.stroke();
     ctx.restore();
   }
 
-  // Barba curta bem aparada e mais baixa (para "matlab" e "boss final")
+  // Barba curta aparada + bigode curvado para baixo (para "matlab" e "boss final")
   drawShortBeard(ctx, cx, cy, r, fillColor, strokeColor) {
     ctx.fillStyle = fillColor;
     ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 1.5;
 
-    // Fica concentrada só na borda inferior do queixo/maxilar
+    // Barba concentrada na borda inferior do queixo
     ctx.beginPath();
-    ctx.moveTo(cx - r * 0.76, cy + r * 0.38);
-    ctx.quadraticCurveTo(cx - r * 0.38, cy + r * 0.64, cx, cy + r * 0.6);
-    ctx.quadraticCurveTo(cx + r * 0.38, cy + r * 0.64, cx + r * 0.76, cy + r * 0.38);
-    ctx.arc(cx, cy, r, 0.4, Math.PI - 0.4, false);
+    ctx.moveTo(cx - r * 0.78, cy + r * 0.34);
+    ctx.quadraticCurveTo(cx - r * 0.4, cy + r * 0.64, cx, cy + r * 0.6);
+    ctx.quadraticCurveTo(cx + r * 0.4, cy + r * 0.64, cx + r * 0.78, cy + r * 0.34);
+    ctx.arc(cx, cy, r, 0.36, Math.PI - 0.36, false);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // Bigode fino integrado
+    // Bigode curvado (arqueado no centro e caído nas pontas)
     ctx.beginPath();
-    ctx.roundRect(cx - r * 0.3, cy + r * 0.36, r * 0.6, r * 0.12, 4);
+    ctx.moveTo(cx - r * 0.42, cy + r * 0.46);
+    ctx.quadraticCurveTo(cx - r * 0.22, cy + r * 0.24, cx, cy + r * 0.28);
+    ctx.quadraticCurveTo(cx + r * 0.22, cy + r * 0.24, cx + r * 0.42, cy + r * 0.46);
+    ctx.quadraticCurveTo(cx + r * 0.22, cy + r * 0.37, cx, cy + r * 0.39);
+    ctx.quadraticCurveTo(cx - r * 0.22, cy + r * 0.37, cx - r * 0.42, cy + r * 0.46);
+    ctx.closePath();
     ctx.fill();
+    ctx.stroke();
   }
 
   // Método principal de renderização de todas as skins
