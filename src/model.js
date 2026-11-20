@@ -3,6 +3,7 @@ class GameModel {
     this.width = canvasWidth;
     this.height = canvasHeight;
 
+    // Adicione quantas palavras/frases quiser aqui (MAIÚSCULAS, sem acento/Ç e até 12 caracteres)
     this.phrases = [
       "AMOR",
       "VIDA",
@@ -21,6 +22,7 @@ class GameModel {
       "COMUNIDADE"
     ];
 
+    this.shuffledPhrases = [];
     this.alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     this.difficulty = "easy"; // "easy" | "hard"
     this.highScore = Number(localStorage.getItem("librasQuestHighScore")) || 0;
@@ -32,10 +34,21 @@ class GameModel {
     this.difficulty = mode === "hard" ? "hard" : "easy";
   }
 
+  // Embaralha a lista de palavras (algoritmo Fisher-Yates)
+  shufflePhrases() {
+    const list = [...this.phrases];
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+  }
+
   resetGame() {
     this.score = 0;
     this.phrasesCompleted = 0;
     this.currentPhraseIndex = 0;
+    this.shuffledPhrases = this.shufflePhrases();
     this.timeLeft = 300;
     this.phraseStartTime = 300;
     this.isGameOver = false;
@@ -60,7 +73,12 @@ class GameModel {
   }
 
   loadPhrase(index) {
-    const phrase = this.phrases[index % this.phrases.length];
+    // Se o jogador zerar todas as palavras dentro dos 5 min, reembaralha para continuar
+    if (index > 0 && index % this.shuffledPhrases.length === 0) {
+      this.shuffledPhrases = this.shufflePhrases();
+    }
+
+    const phrase = this.shuffledPhrases[index % this.shuffledPhrases.length];
     this.currentPhrase = phrase;
     this.phraseStartTime = this.timeLeft;
     this.isChecking = false;
@@ -97,7 +115,7 @@ class GameModel {
       }
     }
 
-    // 2. Deck da Zona Inferior (com espaço extra embaixo para a dica do Modo Fácil)
+    // 2. Deck da Zona Inferior
     const extraCount = Math.min(4, 12 - requiredLetters.length);
     const poolLetters = [...requiredLetters];
 
