@@ -145,6 +145,29 @@
     </div>
   </section>
 
+  <!-- MODAL SECRETO DE DEBUG (Tecla F2) -->
+  <div id="debug-overlay" class="debug-overlay hidden">
+    <div class="debug-modal">
+      <div class="panel-header-pill">🛠️ DEBUG / CHEAT</div>
+      <p class="pause-text">Defina o Recorde (High Score) para liberar ou travar as skins:</p>
+
+      <div class="debug-input-row">
+        <input type="number" id="debug-highscore-input" min="0" step="50" placeholder="Ex: 3500" />
+        <button type="button" id="btn-debug-apply" class="btn-3d btn-green">Aplicar</button>
+      </div>
+
+      <div class="debug-presets">
+        <button type="button" class="btn-3d btn-orange debug-preset-btn" data-score="0">🔒 Zerar (0)</button>
+        <button type="button" class="btn-3d btn-blue debug-preset-btn" data-score="1400">🔓 Metade (1400)</button>
+        <button type="button" class="btn-3d btn-yellow debug-preset-btn" data-score="3500">👑 Todas (3500)</button>
+      </div>
+
+      <button type="button" id="btn-debug-close" class="btn-3d btn-blue debug-close-btn">
+        ✖ Fechar (F2)
+      </button>
+    </div>
+  </div>
+
   <!-- Scripts na ordem MVC: Model -> View -> Controller -->
   <script src="src/model.js"></script>
   <script src="src/view.js"></script>

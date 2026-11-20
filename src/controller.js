@@ -39,7 +39,26 @@ class GameController {
       this.updateHUD();
     });
 
+    // Ativa os botões do menu de Debug (F2)
+    this.bindDebugEvents();
+
     window.addEventListener("keydown", (e) => {
+      // Tecla F2 abre/fecha o menu de debug em qualquer tela
+      if (e.code === "F2") {
+        e.preventDefault();
+        this.toggleDebugModal();
+        return;
+      }
+
+      // Enquanto o menu de debug estiver aberto, bloqueia os controles do jogo
+      const debugOverlay = document.getElementById("debug-overlay");
+      if (debugOverlay && !debugOverlay.classList.contains("hidden")) {
+        if (e.code === "Escape") {
+          this.toggleDebugModal(false);
+        }
+        return;
+      }
+
       this.keys[e.code] = true;
 
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) {
@@ -64,6 +83,56 @@ class GameController {
     window.addEventListener("keyup", (e) => {
       this.keys[e.code] = false;
     });
+  }
+
+  bindDebugEvents() {
+    const input = document.getElementById("debug-highscore-input");
+    const btnApply = document.getElementById("btn-debug-apply");
+    const btnClose = document.getElementById("btn-debug-close");
+
+    if (!input || !btnApply || !btnClose) return;
+
+    btnApply.addEventListener("click", () => this.applyDebugScore(input.value));
+    btnClose.addEventListener("click", () => this.toggleDebugModal(false));
+
+    input.addEventListener("keydown", (e) => {
+      if (e.code === "Enter") {
+        e.preventDefault();
+        this.applyDebugScore(input.value);
+      }
+    });
+
+    document.querySelectorAll(".debug-preset-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        input.value = btn.dataset.score;
+        this.applyDebugScore(btn.dataset.score);
+      });
+    });
+  }
+
+  toggleDebugModal(forceState) {
+    const overlay = document.getElementById("debug-overlay");
+    const input = document.getElementById("debug-highscore-input");
+    if (!overlay || !input) return;
+
+    const shouldOpen = typeof forceState === "boolean" ? forceState : overlay.classList.contains("hidden");
+
+    if (shouldOpen) {
+      this.keys = {};
+      input.value = this.model.highScore;
+      overlay.classList.remove("hidden");
+      input.focus();
+      input.select();
+    } else {
+      overlay.classList.add("hidden");
+    }
+  }
+
+  applyDebugScore(value) {
+    this.model.setHighScore(value);
+    this.updateHUD();
+    this.renderSkinsMenu();
+    this.toggleDebugModal(false);
   }
 
   renderSkinsMenu() {

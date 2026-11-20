@@ -60,6 +60,19 @@ class GameModel {
     return true;
   }
 
+  setHighScore(newScore) {
+    const validScore = Math.max(0, Math.floor(Number(newScore) || 0));
+    this.highScore = validScore;
+    this.runStartHighScore = validScore;
+    localStorage.setItem("librasQuestHighScore", String(this.highScore));
+
+    // Se a skin equipada ficou bloqueada novamente, volta para a Padrão
+    if (!this.isSkinUnlocked(this.selectedSkin)) {
+      this.selectedSkin = "default";
+      localStorage.setItem("librasQuestSelectedSkin", "default");
+    }
+  }
+
   setDifficulty(mode) {
     this.difficulty = mode === "hard" ? "hard" : "easy";
   }
