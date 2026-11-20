@@ -1,15 +1,21 @@
 class GameView {
-  constructor(canvas) {
-    this.canvas = canvas;
-    this.ctx = canvas.getContext("2d");
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext("2d");
 
-    this.images = {};
-    this.loadImage("player", "assets/imagens/personagem.png");
+        // Canvas auxiliar para piscar o personagem inteiro sem mostrar camadas internas
+        this.playerBuffer = document.createElement("canvas");
+        this.playerBuffer.width = 100;
+        this.playerBuffer.height = 100;
+        this.playerBufferCtx = this.playerBuffer.getContext("2d");
 
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((letter) => {
-      this.loadImage(letter, `assets/imagens/${letter}.png`);
-    });
-  }
+        this.images = {};
+        this.loadImage("player", "assets/imagens/personagem.png");
+
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((letter) => {
+        this.loadImage(letter, `assets/imagens/${letter}.png`);
+        });
+    }
 
   loadImage(key, src) {
     const img = new Image();
@@ -321,33 +327,40 @@ class GameView {
     ctx.fillText(`Letra: ${card.letter}`, bx + badgeW / 2, by + 16);
   }
 
-  drawPlayer(player, skinId = "default") {
+drawPlayer(player, skinId = "default") {
     const ctx = this.ctx;
+    const isBlinking = player.invulnFrames > 0 && Math.floor(player.invulnFrames / 5) % 2 === 0;
 
-    if (player.invulnFrames > 0 && Math.floor(player.invulnFrames / 5) % 2 === 0) {
+    if (isBlinking) {
+      const bCtx = this.playerBufferCtx;
+      const cx = player.x + player.width / 2;
+      const cy = player.y + player.height / 2;
+
+      bCtx.clearRect(0, 0, this.playerBuffer.width, this.playerBuffer.height);
+      this.drawPlayerComposite(bCtx, 50, 50, player, skinId);
+
       ctx.save();
       ctx.globalAlpha = 0.45;
-      this.drawPlayerSprite(player, skinId);
+      ctx.drawImage(this.playerBuffer, cx - 50, cy - 50);
       ctx.restore();
       return;
     }
 
-    this.drawPlayerSprite(player, skinId);
-  }
-
-  drawPlayerSprite(player, skinId) {
-    const ctx = this.ctx;
     const cx = player.x + player.width / 2;
     const cy = player.y + player.height / 2;
+    this.drawPlayerComposite(ctx, cx, cy, player, skinId);
+  }
+
+  drawPlayerComposite(targetCtx, cx, cy, player, skinId) {
     const radius = player.width / 2 - 2;
 
     // Sombra no chão
-    ctx.fillStyle = "rgba(15, 23, 42, 0.25)";
-    ctx.beginPath();
-    ctx.ellipse(cx, player.y + player.height, player.width * 0.42, 6, 0, 0, Math.PI * 2);
-    ctx.fill();
+    targetCtx.fillStyle = "rgba(15, 23, 42, 0.25)";
+    targetCtx.beginPath();
+    targetCtx.ellipse(cx, cy + player.height / 2, player.width * 0.42, 6, 0, 0, Math.PI * 2);
+    targetCtx.fill();
 
-    this.drawSkinAvatar(ctx, cx, cy, radius, skinId);
+    this.drawSkinAvatar(targetCtx, cx, cy, radius, skinId);
   }
 
   // --- HELPERS DE CABELO, BARBA E ÓCULOS ---
