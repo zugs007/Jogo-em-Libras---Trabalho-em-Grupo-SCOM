@@ -62,13 +62,15 @@ class GameView {
     // 3. BANDEJA INFERIOR AZUL SURDO (Baralho de Cartas)
     this.drawBottomTray(model);
 
-    // 4. OBSTÁCULOS MÓVEIS
+    // 4. OBSTÁCULOS MÓVEIS (Nuvens de Confusão)
     this.drawObstacles(model.obstacles);
 
-    // 5. CARTAS NO DECK E NOS SLOTS
+    // 5. CARTAS NO DECK E NOS SLOTS (com destaque vermelho/verde na verificação)
     for (const card of model.deckCards) {
       if (model.player.carriedCard && model.player.carriedCard.id === card.id) continue;
-      this.drawCard(card, highlightedCard === card);
+      const parentSlot = model.slots.find((s) => s.placedCard === card);
+      const slotStatus = parentSlot ? parentSlot.status : null;
+      this.drawCard(card, highlightedCard === card, slotStatus);
     }
 
     // 6. PERSONAGEM (com a skin selecionada)
@@ -81,15 +83,15 @@ class GameView {
 
     // 8. CARTA CARREGADA (por cima de tudo)
     if (model.player.carriedCard) {
-      this.drawCard(model.player.carriedCard, true);
+      this.drawCard(model.player.carriedCard, true, null);
     }
   }
 
   drawArenaDetails(model) {
     const ctx = this.ctx;
     const relativeTufts = [
-      [0.14, 0.38], [0.28, 0.56], [0.75, 0.40], [0.86, 0.58],
-      [0.20, 0.62], [0.58, 0.50], [0.42, 0.39], [0.68, 0.59]
+      [0.14, 0.42], [0.28, 0.58], [0.75, 0.44], [0.86, 0.60],
+      [0.20, 0.64], [0.58, 0.52], [0.42, 0.43], [0.68, 0.61]
     ];
 
     ctx.strokeStyle = "#4ade80";
@@ -112,29 +114,95 @@ class GameView {
 
   drawObstacles(obstacles) {
     const ctx = this.ctx;
-    for (const obs of obstacles) {
+    const time = performance.now() * 0.006;
+
+    for (let idx = 0; idx < obstacles.length; idx++) {
+      const obs = obstacles[idx];
+      const cx = obs.x + obs.width / 2;
+      const cy = obs.y + obs.height / 2;
+      const hover = Math.sin(time + idx * 2) * 2.5;
+      const drawCy = cy + hover;
+
+      ctx.save();
+
+      // Sombra projetada no gramado
       ctx.fillStyle = "rgba(15, 23, 42, 0.22)";
       ctx.beginPath();
-      ctx.roundRect(obs.x, obs.y + 5, obs.width, obs.height, 999);
+      ctx.ellipse(cx, obs.y + obs.height + 7, obs.width * 0.42, 5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = "#f97316";
+      // Silhueta unificada da nuvem cartoon
+      const drawCloudPath = () => {
+        ctx.beginPath();
+        ctx.arc(obs.x + 15, drawCy + 2, 13, Math.PI * 0.5, Math.PI * 1.45);
+        ctx.arc(obs.x + 27, drawCy - 5, 15, Math.PI * 1.05, Math.PI * 1.95);
+        ctx.arc(obs.x + 42, drawCy - 4, 14, Math.PI * 1.15, Math.PI * 0.15);
+        ctx.arc(obs.x + 51, drawCy + 3, 12, -Math.PI * 0.35, Math.PI * 0.5);
+        ctx.closePath();
+      };
+
+      drawCloudPath();
+      ctx.lineJoin = "round";
+      ctx.lineWidth = 6;
       ctx.strokeStyle = "#1e293b";
-      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      const cloudGrad = ctx.createLinearGradient(0, drawCy - 18, 0, drawCy + 15);
+      cloudGrad.addColorStop(0, "#64748b");
+      cloudGrad.addColorStop(0.55, "#475569");
+      cloudGrad.addColorStop(1, "#334155");
+      ctx.fillStyle = cloudGrad;
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
       ctx.beginPath();
-      ctx.roundRect(obs.x, obs.y, obs.width, obs.height, 999);
+      ctx.ellipse(cx - 3, drawCy - 11, 16, 4.5, -0.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Olhinhos expressivos
+      const eyeY = drawCy + 3;
+      const leftEyeX = cx - 10;
+      const rightEyeX = cx + 10;
+
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(leftEyeX, eyeY, 4.8, 0, Math.PI * 2);
+      ctx.arc(rightEyeX, eyeY, 4.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      const lookDir = obs.vx >= 0 ? 1.2 : -1.2;
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.arc(leftEyeX + lookDir, eyeY + 0.5, 2.4, 0, Math.PI * 2);
+      ctx.arc(rightEyeX + lookDir, eyeY + 0.5, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "#0f172a";
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(leftEyeX - 4, eyeY - 6.5);
+      ctx.lineTo(leftEyeX + 3.5, eyeY - 4);
+      ctx.moveTo(rightEyeX + 4, eyeY - 6.5);
+      ctx.lineTo(rightEyeX - 3.5, eyeY - 4);
+      ctx.stroke();
+
+      // Emblema amarelo flutuante (?)
+      const badgeY = drawCy - 16 + Math.cos(time * 1.4 + idx) * 1.5;
+      ctx.fillStyle = "#facc15";
+      ctx.strokeStyle = "#1e293b";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, badgeY, 8.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = "#fdba74";
-      ctx.beginPath();
-      ctx.roundRect(obs.x + 8, obs.y + 4, obs.width - 16, 7, 999);
-      ctx.fill();
-
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 12px Fredoka, Segoe UI, sans-serif";
+      ctx.fillStyle = "#1e293b";
+      ctx.font = "bold 11px Fredoka, Segoe UI, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("⚡ RUÍDO", obs.x + obs.width / 2, obs.y + 22);
+      ctx.fillText("?", cx, badgeY + 4);
+
+      ctx.restore();
     }
   }
 
@@ -143,7 +211,7 @@ class GameView {
     const bx = 22;
     const by = 10;
     const bw = model.width - 44;
-    const bh = model.isCompact ? 156 : 152;
+    const bh = model.isCompact ? 182 : 178;
 
     ctx.fillStyle = "#1e3a8a";
     ctx.beginPath();
@@ -164,32 +232,65 @@ class GameView {
     ctx.roundRect(bx + 4, by + 4, bw - 8, bh - 8, 18);
     ctx.stroke();
 
-    const pillW = Math.min(550, model.width - 66);
+    // Faixa superior de aviso ampliada e bem legível
+    const pillW = model.width - 66;
+    const pillH = 38;
+    const pillX = model.width / 2 - pillW / 2;
+    const pillY = by + 10;
+
     ctx.fillStyle = "#fffbeb";
     ctx.strokeStyle = "#1e293b";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.roundRect(model.width / 2 - pillW / 2, by + 8, pillW, 26, 999);
+    ctx.roundRect(pillX, pillY, pillW, pillH, 999);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "#1e3a8a";
-    ctx.font = model.isCompact ? "bold 12px Nunito, Segoe UI, sans-serif" : "bold 13.5px Nunito, Segoe UI, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(model.feedbackMessage, model.width / 2, by + 25);
+    // Texto maior com auto-ajuste caso a mensagem seja muito comprida
+    let fontSize = model.isCompact ? 14.5 : 17;
+    ctx.font = `800 ${fontSize}px Nunito, Segoe UI, sans-serif`;
+    while (ctx.measureText(model.feedbackMessage).width > pillW - 28 && fontSize > 11.5) {
+      fontSize -= 0.5;
+      ctx.font = `800 ${fontSize}px Nunito, Segoe UI, sans-serif`;
+    }
 
+    ctx.fillStyle = "#1e3a8a";
+    ctx.textAlign = "center";
+    ctx.fillText(model.feedbackMessage, model.width / 2, pillY + pillH / 2 + fontSize * 0.35);
+
+    // Letras e Slots da palavra
     for (const slot of model.slots) {
       if (slot.isSpace) continue;
 
-      const letterFontSize = slot.width < 48 ? 22 : 26;
+      const letterFontSize = slot.width < 48 ? 24 : 28;
+      const letterY = slot.y - 11;
+
+      // Destaque vermelho/verde atrás da letra quando verificada
+      if (slot.status === "wrong" || slot.status === "correct") {
+        ctx.fillStyle = slot.status === "wrong" ? "#dc2626" : "#16a34a";
+        ctx.strokeStyle = "#1e293b";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(slot.x + slot.width / 2 - 16, letterY - letterFontSize + 3, 32, letterFontSize + 3, 8);
+        ctx.fill();
+        ctx.stroke();
+      }
+
       ctx.font = `bold ${letterFontSize}px Fredoka, Segoe UI, sans-serif`;
       ctx.textAlign = "center";
       ctx.lineWidth = 4;
       ctx.strokeStyle = "#1e293b";
-      ctx.strokeText(slot.char, slot.x + slot.width / 2, slot.y - 10);
+      ctx.strokeText(slot.char, slot.x + slot.width / 2, letterY);
 
-      ctx.fillStyle = highlightedSlot === slot ? "#fde047" : "#ffffff";
-      ctx.fillText(slot.char, slot.x + slot.width / 2, slot.y - 10);
+      ctx.fillStyle =
+        slot.status === "wrong"
+          ? "#fecaca"
+          : slot.status === "correct"
+          ? "#dcfce7"
+          : highlightedSlot === slot
+          ? "#fde047"
+          : "#ffffff";
+      ctx.fillText(slot.char, slot.x + slot.width / 2, letterY);
 
       let borderColor = "#3b82f6";
       let bgColor = "#ffffff";
@@ -232,7 +333,7 @@ class GameView {
   drawBottomTray(model) {
     const ctx = this.ctx;
     const tx = 22;
-    const th = model.isCompact ? 216 : 136;
+    const th = model.isCompact ? 216 : 138;
     const ty = model.height - th - 8;
     const tw = model.width - 44;
 
@@ -256,43 +357,93 @@ class GameView {
     ctx.fillText("BARALHO DE SINAIS EM LIBRAS", model.width / 2, ty + 20);
   }
 
-  drawCard(card, highlight) {
+  drawCard(card, highlight, slotStatus = null) {
     const ctx = this.ctx;
     const img = this.images[card.letter];
+    const isYellow = card.colorTheme === "yellow";
 
-    ctx.fillStyle = highlight ? "#ca8a04" : "#0f172a";
+    // Sombra da carta
+    ctx.fillStyle =
+      slotStatus === "wrong"
+        ? "#991b1b"
+        : slotStatus === "correct"
+        ? "#15803d"
+        : highlight
+        ? "#ca8a04"
+        : "#0f172a";
     ctx.beginPath();
     ctx.roundRect(card.x, card.y + 4, card.width, card.height, 12);
     ctx.fill();
 
     if (img && img.loaded) {
+      // Fundo suave caso partes da imagem sejam transparentes
+      ctx.fillStyle = isYellow ? "#fef9c3" : "#e0f2fe";
+      ctx.beginPath();
+      ctx.roundRect(card.x, card.y, card.width, card.height, 12);
+      ctx.fill();
+
+      // Desenha o PNG em tamanho total da carta para preservar a borda feita pelo seu amigo
       ctx.save();
       ctx.beginPath();
       ctx.roundRect(card.x, card.y, card.width, card.height, 12);
       ctx.clip();
       ctx.drawImage(img, card.x, card.y, card.width, card.height);
+
+      // Filtro vermelho/verde semitransparente na hora de corrigir a palavra
+      if (slotStatus === "wrong") {
+        ctx.fillStyle = "rgba(220, 38, 38, 0.30)";
+        ctx.fillRect(card.x, card.y, card.width, card.height);
+      } else if (slotStatus === "correct") {
+        ctx.fillStyle = "rgba(22, 163, 74, 0.16)";
+        ctx.fillRect(card.x, card.y, card.width, card.height);
+      }
       ctx.restore();
 
-      if (highlight) {
-        ctx.strokeStyle = "#facc15";
-        ctx.lineWidth = 3.5;
+      // Contorno de status (Vermelho = Errada | Verde = Certa | Amarelo = Selecionada)
+      if (slotStatus === "wrong" || slotStatus === "correct" || highlight) {
+        ctx.strokeStyle =
+          slotStatus === "wrong"
+            ? "#dc2626"
+            : slotStatus === "correct"
+            ? "#16a34a"
+            : "#facc15";
+        ctx.lineWidth = slotStatus ? 4 : 3.5;
         ctx.beginPath();
         ctx.roundRect(card.x, card.y, card.width, card.height, 12);
         ctx.stroke();
       }
+
+      // Selo ✔ ou ✖ no canto superior direito da carta verificada
+      if (slotStatus === "wrong" || slotStatus === "correct") {
+        this.drawCardStatusBadge(card, slotStatus === "correct");
+      }
       return;
     }
 
-    const isYellow = card.colorTheme === "yellow";
+    // Fallback provisório caso alguma imagem falhe
     ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = highlight ? "#facc15" : "#1e293b";
-    ctx.lineWidth = highlight ? 3.5 : 2.5;
+    ctx.strokeStyle =
+      slotStatus === "wrong"
+        ? "#dc2626"
+        : slotStatus === "correct"
+        ? "#16a34a"
+        : highlight
+        ? "#facc15"
+        : "#1e293b";
+    ctx.lineWidth = highlight || slotStatus ? 3.5 : 2.5;
     ctx.beginPath();
     ctx.roundRect(card.x, card.y, card.width, card.height, 12);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = isYellow ? "#fde047" : "#bae6fd";
+    ctx.fillStyle =
+      slotStatus === "wrong"
+        ? "#fecaca"
+        : slotStatus === "correct"
+        ? "#bbf7d0"
+        : isYellow
+        ? "#fde047"
+        : "#bae6fd";
     ctx.beginPath();
     ctx.roundRect(card.x + 4, card.y + 4, card.width - 8, card.height - 8, 9);
     ctx.fill();
@@ -308,6 +459,29 @@ class GameView {
     ctx.fillStyle = "#1e293b";
     ctx.font = "bold 11px Fredoka, Segoe UI, sans-serif";
     ctx.fillText(`[${card.letter}]`, card.x + card.width / 2, card.y + card.height - 7);
+
+    if (slotStatus === "wrong" || slotStatus === "correct") {
+      this.drawCardStatusBadge(card, slotStatus === "correct");
+    }
+  }
+
+  drawCardStatusBadge(card, isCorrect) {
+    const ctx = this.ctx;
+    const bx = card.x + card.width - 8;
+    const by = card.y + 8;
+
+    ctx.fillStyle = isCorrect ? "#16a34a" : "#dc2626";
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(bx, by, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 11px Nunito, Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(isCorrect ? "✔" : "✖", bx, by + 4);
   }
 
   drawCardLetterHint(card) {
@@ -358,7 +532,6 @@ class GameView {
   drawPlayerComposite(targetCtx, cx, cy, player, skinId) {
     const radius = player.width / 2 - 2;
 
-    // Sombra no chão
     targetCtx.fillStyle = "rgba(15, 23, 42, 0.25)";
     targetCtx.beginPath();
     targetCtx.ellipse(cx, cy + player.height / 2, player.width * 0.42, 6, 0, 0, Math.PI * 2);

@@ -50,11 +50,11 @@ class GameModel {
 
   getLayoutMetrics() {
     const playerSize = this.isCompact ? 54 : 48;
-    const trayH = this.isCompact ? 216 : 136;
+    const trayH = this.isCompact ? 216 : 138;
     const trayY = this.height - trayH - 8;
-    const minY = 112;
+    const minY = 128;
     const maxY = this.height - playerSize - 10;
-    const centerArenaY = Math.round((166 + trayY) / 2 - playerSize / 2);
+    const centerArenaY = Math.round((192 + trayY) / 2 - playerSize / 2);
 
     return { playerSize, trayH, trayY, minY, maxY, centerArenaY };
   }
@@ -88,21 +88,21 @@ class GameModel {
     if (this.isCompact) {
       return this.difficulty === "hard"
         ? [
-            { x: 60, y: 205, width: 64, height: 32, vx: 2.3 },
-            { x: this.width - 124, y: 365, width: 64, height: 32, vx: -2.6 }
+            { x: 60, y: 235, width: 64, height: 32, vx: 2.3 },
+            { x: this.width - 124, y: 395, width: 64, height: 32, vx: -2.6 }
           ]
         : [
-            { x: 80, y: 215, width: 64, height: 32, vx: 1.9 }
+            { x: 80, y: 245, width: 64, height: 32, vx: 1.9 }
           ];
     }
 
     return this.difficulty === "hard"
       ? [
-          { x: 140, y: 205, width: 64, height: 32, vx: 2.8 },
-          { x: 680, y: 325, width: 64, height: 32, vx: -3.2 }
+          { x: 140, y: 228, width: 64, height: 32, vx: 2.8 },
+          { x: 700, y: 355, width: 64, height: 32, vx: -3.2 }
         ]
       : [
-          { x: 180, y: 215, width: 64, height: 32, vx: 2.2 }
+          { x: 180, y: 240, width: 64, height: 32, vx: 2.2 }
         ];
   }
 
@@ -157,8 +157,8 @@ class GameModel {
     this.isPaused = false;
     this.feedbackMessage =
       this.difficulty === "easy"
-        ? "Modo Fácil: passe sobre a carta para ver a letra e desvie da barreira!"
-        : "Modo Difícil: identifique os sinais de memória e desvie das barreiras!";
+        ? "Modo Fácil: passe sobre a carta para ver a letra e desvie da nuvem!"
+        : "Modo Difícil: identifique os sinais de memória e desvie das nuvens!";
 
     const { playerSize, centerArenaY } = this.getLayoutMetrics();
 
@@ -196,7 +196,6 @@ class GameModel {
     this.isChecking = false;
     this.player.carriedCard = null;
 
-    // 1. Letras necessárias da frase
     const requiredLetters = [];
     for (let i = 0; i < phrase.length; i++) {
       if (phrase[i] !== " ") {
@@ -204,7 +203,6 @@ class GameModel {
       }
     }
 
-    // 2. Embaralha cartas do deck (letras certas + extras)
     const extraCount = Math.min(4, 12 - requiredLetters.length);
     const poolLetters = [...requiredLetters];
 
@@ -237,9 +235,9 @@ class GameModel {
       isSpace: char === " ",
       char,
       x: 0,
-      y: 82,
+      y: 102,
       width: 56,
-      height: 66,
+      height: 68,
       placedCard: null,
       status: "empty"
     }));
@@ -248,14 +246,13 @@ class GameModel {
   }
 
   layoutPhraseItems(phrase) {
-    // 1. Posiciona Slots da Zona Superior adaptando à largura da tela
     const gap = this.isCompact ? 6 : 10;
     const maxSlotsWidth = this.width - 68;
-    const slotW = Math.min(56, Math.floor((maxSlotsWidth - (phrase.length - 1) * gap) / phrase.length));
-    const slotH = this.isCompact ? Math.max(54, Math.min(68, Math.round(slotW * 1.22))) : 66;
+    const slotW = Math.min(58, Math.floor((maxSlotsWidth - (phrase.length - 1) * gap) / phrase.length));
+    const slotH = this.isCompact ? Math.max(54, Math.min(70, Math.round(slotW * 1.22))) : 68;
     const totalWidth = phrase.length * (slotW + gap) - gap;
     const startX = (this.width - totalWidth) / 2;
-    const slotY = 82;
+    const slotY = 102;
 
     for (let i = 0; i < this.slots.length; i++) {
       const slot = this.slots[i];
@@ -272,7 +269,6 @@ class GameModel {
       }
     }
 
-    // 2. Posiciona Deck da Zona Inferior (1 fileira no PC, 2 fileiras maiores no celular)
     const totalCards = this.deckCards.length;
 
     if (this.isCompact) {
@@ -304,12 +300,12 @@ class GameModel {
         }
       });
     } else {
-      const cardW = 56;
-      const cardH = 68;
+      const cardW = 58;
+      const cardH = 70;
       const cardGap = 14;
       const deckTotalWidth = totalCards * (cardW + cardGap) - cardGap;
       const deckStartX = (this.width - deckTotalWidth) / 2;
-      const deckY = this.height - 116;
+      const deckY = this.height - 118;
 
       this.deckCards.forEach((card, idx) => {
         card.homeX = deckStartX + idx * (cardW + cardGap);
@@ -386,9 +382,9 @@ class GameModel {
         if (this.player.carriedCard) {
           this.returnCardToDeck(this.player.carriedCard);
           this.player.carriedCard = null;
-          this.feedbackMessage = "💥 Esbarrou na barreira! A carta voltou ao baralho.";
+          this.feedbackMessage = "💥 Esbarrou na nuvem! A carta voltou ao baralho.";
         } else {
-          this.feedbackMessage = "💥 Cuidado com as barreiras em movimento!";
+          this.feedbackMessage = "💥 Cuidado com as nuvens de confusão!";
         }
       }
     }
@@ -519,7 +515,7 @@ class GameModel {
       const hardTag = this.difficulty === "hard" ? " • Bônus Difícil 1.5x" : "";
       this.feedbackMessage = `✅ Perfeito! +${earnedPoints} pts (Agilidade: +${speedBonus}${hardTag})!`;
     } else {
-      this.feedbackMessage = `Você acertou ${correctCount}/${letterSlots.length} letras (+${earnedPoints} pts). Próxima frase...`;
+      this.feedbackMessage = `❌ Você acertou ${correctCount}/${letterSlots.length} letras (+${earnedPoints} pts). Veja em vermelho o que errou!`;
     }
 
     setTimeout(() => {
@@ -529,6 +525,6 @@ class GameModel {
         this.feedbackMessage = "Nova frase! Combine os sinais em Libras.";
         if (onNextPhraseCallback) onNextPhraseCallback();
       }
-    }, 1600);
+    }, 2000);
   }
 }

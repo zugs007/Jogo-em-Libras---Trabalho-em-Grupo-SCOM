@@ -1,7 +1,11 @@
 class GameController {
   constructor() {
     this.canvas = document.getElementById("game-canvas");
-    this.model = new GameModel(this.canvas.width, this.canvas.height);
+    const viewport = this.getTargetCanvasSize();
+    this.canvas.width = viewport.width;
+    this.canvas.height = viewport.height;
+
+    this.model = new GameModel(viewport.width, viewport.height, viewport.isCompact);
     this.view = new GameView(this.canvas);
 
     this.keys = {};
@@ -11,6 +15,27 @@ class GameController {
     this.bindEvents();
     this.updateHUD();
     this.renderSkinsMenu();
+  }
+
+  getTargetCanvasSize() {
+    const isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
+    return isMobilePortrait
+      ? { width: 560, height: 725, isCompact: true }
+      : { width: 920, height: 585, isCompact: false };
+  }
+
+  applyResponsiveCanvas() {
+    const viewport = this.getTargetCanvasSize();
+    if (this.canvas.width !== viewport.width || this.canvas.height !== viewport.height) {
+      this.canvas.width = viewport.width;
+      this.canvas.height = viewport.height;
+    }
+    if (this.model) {
+      this.model.setViewport(viewport.width, viewport.height, viewport.isCompact);
+      if (!this.model.isGameOver) {
+        this.view.render(this.model);
+      }
+    }
   }
 
   bindEvents() {
@@ -39,22 +64,19 @@ class GameController {
       this.updateHUD();
     });
 
-    // Ativa os botões do menu de Debug (F2)
     this.bindDebugEvents();
-
     this.bindAlphabetEvents();
-
     this.bindTouchEvents();
 
+    window.addEventListener("resize", () => this.applyResponsiveCanvas());
+
     window.addEventListener("keydown", (e) => {
-      // Tecla F2 abre/fecha o menu de debug em qualquer tela
       if (e.code === "F2") {
         e.preventDefault();
         this.toggleDebugModal();
         return;
       }
 
-      // Enquanto o menu de debug estiver aberto, bloqueia os controles do jogo
       const debugOverlay = document.getElementById("debug-overlay");
       if (debugOverlay && !debugOverlay.classList.contains("hidden")) {
         if (e.code === "Escape") {
@@ -157,7 +179,6 @@ class GameController {
     btnOpen.addEventListener("click", () => this.toggleAlphabetModal(true));
     btnClose.addEventListener("click", () => this.toggleAlphabetModal(false));
 
-    // Fecha também se clicar fora da caixa branca
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) {
         this.toggleAlphabetModal(false);
@@ -242,7 +263,6 @@ class GameController {
       btn.addEventListener("touchend", release, { passive: false });
       btn.addEventListener("touchcancel", release, { passive: false });
 
-      // Suporte extra caso testem o modo celular pelo DevTools do PC com o mouse
       btn.addEventListener("mousedown", press);
       btn.addEventListener("mouseup", release);
       btn.addEventListener("mouseleave", release);
@@ -357,6 +377,7 @@ class GameController {
   }
 
   startGame() {
+    this.applyResponsiveCanvas();
     this.model.resetGame();
     this.syncPauseUI();
     this.updateHUD();
