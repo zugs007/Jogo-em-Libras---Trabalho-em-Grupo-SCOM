@@ -168,7 +168,9 @@ class GameModel {
     if (this.isGameOver || this.isPaused) return;
     this.currentPhraseIndex++;
     this.loadPhrase(this.currentPhraseIndex);
-    this.feedbackMessage = "⏭️ Fase pulada (modo teste — sem pontos).";
+    if (!this.enemyManager.hasActiveBoss()) {
+      this.feedbackMessage = "⏭️ Fase pulada (modo teste — sem pontos).";
+    }
   }
 
   loadPhrase(index) {
@@ -452,9 +454,11 @@ class GameModel {
     }
 
     const isPerfect = correctCount === letterSlots.length;
+    const hadBoss = this.enemyManager.hasActiveBoss();
+    const bossBonus = isPerfect && hadBoss ? 100 : 0;
     const timeSpent = Math.max(0, this.phraseStartTime - this.timeLeft);
     const speedBonus = isPerfect ? Math.max(0, 30 - timeSpent) * 2 : 0;
-    const basePoints = correctCount * 20 + (isPerfect ? 50 : 0) + speedBonus;
+    const basePoints = correctCount * 20 + (isPerfect ? 50 : 0) + speedBonus + bossBonus;
     const multiplier = this.difficulty === "hard" ? 1.5 : 1;
     const earnedPoints = Math.round(basePoints * multiplier);
 
@@ -467,8 +471,9 @@ class GameModel {
 
     if (isPerfect) {
       this.phrasesCompleted++;
-      const hardTag = this.difficulty === "hard" ? " • Bônus Difícil 1.5x" : "";
-      this.feedbackMessage = `✅ Perfeito! +${earnedPoints} pts (Agilidade: +${speedBonus}${hardTag})!`;
+      const bossTag = bossBonus > 0 ? " • Chefe +100" : "";
+      const hardTag = this.difficulty === "hard" ? " • Difícil 1.5x" : "";
+      this.feedbackMessage = `✅ Perfeito! +${earnedPoints} pts (Agilidade: +${speedBonus}${bossTag}${hardTag})!`;
     } else {
       this.feedbackMessage = `❌ Você acertou ${correctCount}/${letterSlots.length} letras (+${earnedPoints} pts). Veja em vermelho o que errou!`;
     }
@@ -477,7 +482,9 @@ class GameModel {
       if (!this.isGameOver) {
         this.currentPhraseIndex++;
         this.loadPhrase(this.currentPhraseIndex);
-        this.feedbackMessage = "Nova frase! Combine os sinais em Libras.";
+        if (!this.enemyManager.hasActiveBoss()) {
+          this.feedbackMessage = "Nova frase! Combine os sinais em Libras.";
+        }
         if (onNextPhraseCallback) onNextPhraseCallback();
       }
     }, 2000);

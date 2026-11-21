@@ -49,7 +49,7 @@ class GameView {
         )
       : null;
 
-    // 1. FUNDO DA ARENA
+    // 1. FUNDO DA ARENA E POÇAS TEMPORÁRIAS
     const arenaGrad = ctx.createLinearGradient(0, 0, 0, model.height);
     arenaGrad.addColorStop(0, "#bae6fd");
     arenaGrad.addColorStop(0.32, "#bbf7d0");
@@ -58,7 +58,7 @@ class GameView {
     ctx.fillRect(0, 0, model.width, model.height);
 
     this.drawArenaDetails(model);
-    this.drawPuddles(model.enemyManager.puddles);
+    this.drawPuddles(model.enemyManager.puddles || []);
 
     // 2. QUADRO SUPERIOR AZUL SURDO (Frase + Slots)
     this.drawTopBoard(model, highlightedSlot);
@@ -66,10 +66,11 @@ class GameView {
     // 3. BANDEJA INFERIOR AZUL SURDO (Baralho de Cartas)
     this.drawBottomTray(model);
 
-    // 4. OBSTÁCULOS MÓVEIS (Nuvens de Confusão)
-    this.drawObstacles(model.enemyManager.enemies, model);
+    // 4. OBSTÁCULOS MÓVEIS, BOSSES E PROJÉTEIS
+    this.drawObstacles(model.enemyManager.enemies || [], model);
+    this.drawProjectiles(model.enemyManager.projectiles || []);
 
-    // 5. CARTAS NO DECK E NOS SLOTS (com destaque vermelho/verde na verificação)
+    // 5. CARTAS NO DECK E NOS SLOTS
     for (const card of model.deckCards) {
       if (model.player.carriedCard && model.player.carriedCard.id === card.id) continue;
       const parentSlot = model.slots.find((s) => s.placedCard === card);
@@ -77,7 +78,7 @@ class GameView {
       this.drawCard(card, highlightedCard === card, slotStatus);
     }
 
-    // 6. PERSONAGEM (com a skin selecionada)
+    // 6. PERSONAGEM (com a skin selecionada e indicador de lentidão)
     const isSlowed = model.enemyManager.getPlayerSpeedMultiplier(model.player) < 1;
     this.drawPlayer(model.player, model.selectedSkin, isSlowed);
 
@@ -117,6 +118,40 @@ class GameView {
     }
   }
 
+  drawPuddles(puddles) {
+    const ctx = this.ctx;
+    const time = performance.now() * 0.005;
+
+    for (const p of puddles) {
+      const alpha = p.life < 45 ? p.life / 45 : 1;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+
+      ctx.fillStyle = "rgba(14, 165, 233, 0.45)";
+      ctx.strokeStyle = "#0284c7";
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.rx, p.ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(186, 230, 253, 0.55)";
+      ctx.beginPath();
+      ctx.ellipse(p.x - p.rx * 0.25, p.y - p.ry * 0.2, p.rx * 0.42, p.ry * 0.35, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      const ripple = (Math.sin(time * 2 + p.x) + 1) * 0.5;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.rx * (0.25 + ripple * 0.3), p.ry * (0.25 + ripple * 0.3), 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  }
+
   drawObstacles(obstacles, model) {
     const ctx = this.ctx;
     const time = performance.now() * 0.006;
@@ -127,11 +162,17 @@ class GameView {
       if (obs.type === "diagonal") {
         this.drawDiagonalCloud(ctx, obs, time, idx);
       } else if (obs.type === "dash") {
-        this.drawDashEnemy(ctx, obs, model, time, idx);
+        this.drawDashEnemy(ctx, obs, model, time);
       } else if (obs.type === "thief") {
         this.drawThiefEnemy(ctx, obs, time);
       } else if (obs.type === "puddle_cloud") {
         this.drawPuddleCloud(ctx, obs, time, idx);
+      } else if (obs.type === "boss_chaser") {
+        this.drawChaserBoss(ctx, obs, time);
+      } else if (obs.type === "boss_megaphone") {
+        this.drawMegaphoneBoss(ctx, obs, time);
+      } else if (obs.type === "boss_tornado") {
+        this.drawTornadoBoss(ctx, obs, time);
       } else {
         this.drawHorizontalCloud(ctx, obs, time, idx);
       }
@@ -146,11 +187,13 @@ class GameView {
 
     ctx.save();
 
+    // Sombra no gramado
     ctx.fillStyle = "rgba(15, 23, 42, 0.22)";
     ctx.beginPath();
     ctx.ellipse(cx, obs.y + obs.height + 7, obs.width * 0.42, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // Corpo da nuvem
     ctx.beginPath();
     ctx.arc(obs.x + 15, drawCy + 2, 13, Math.PI * 0.5, Math.PI * 1.45);
     ctx.arc(obs.x + 27, drawCy - 5, 15, Math.PI * 1.05, Math.PI * 1.95);
@@ -170,23 +213,22 @@ class GameView {
     ctx.fillStyle = cloudGrad;
     ctx.fill();
 
-    const eyeY = drawCy + 3;
+    // Brilho suave no topo da nuvem
+    ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+    ctx.beginPath();
+    ctx.ellipse(cx - 2, drawCy - 11, 15, 4, -0.08, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Olhos expressivos
+    const eyeY = drawCy + 4;
     const lookDir = obs.vx >= 0 ? 1.2 : -1.2;
     this.drawEnemyEyes(ctx, cx, eyeY, 10, lookDir);
 
-    const badgeY = drawCy - 16 + Math.cos(time * 1.4 + idx) * 1.5;
-    ctx.fillStyle = "#facc15";
-    ctx.strokeStyle = "#1e293b";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cx, badgeY, 8.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = "#1e293b";
+    // '?' discreto estampado na testa da nuvem (sem bolinha flutuante)
+    ctx.fillStyle = "#fde047";
     ctx.font = "bold 11px Fredoka, Segoe UI, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("?", cx, badgeY + 4);
+    ctx.fillText("?", cx, drawCy - 6);
 
     ctx.restore();
   }
@@ -198,13 +240,11 @@ class GameView {
 
     ctx.save();
 
-    // Sombra
     ctx.fillStyle = "rgba(15, 23, 42, 0.22)";
     ctx.beginPath();
     ctx.ellipse(cx, obs.y + obs.height + 7, obs.width * 0.4, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Corpo roxo-escuro elétrico
     ctx.beginPath();
     ctx.arc(obs.x + 14, cy + 2, 12 + pulse * 0.4, Math.PI * 0.5, Math.PI * 1.45);
     ctx.arc(obs.x + 28, cy - 5, 15, Math.PI * 1.05, Math.PI * 1.95);
@@ -222,11 +262,9 @@ class GameView {
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // Olhos
     const lookDir = obs.vx >= 0 ? 1.3 : -1.3;
     this.drawEnemyEyes(ctx, cx, cy + 2, 9, lookDir);
 
-    // Pequeno raio amarelo embaixo da nuvem
     ctx.fillStyle = "#facc15";
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 1.6;
@@ -251,7 +289,6 @@ class GameView {
 
     ctx.save();
 
-    // 1. Linha de aviso pontilhada vermelha antes de disparar
     if (obs.state === "aiming") {
       const blink = Math.floor(performance.now() / 90) % 2 === 0;
       ctx.save();
@@ -265,7 +302,6 @@ class GameView {
       ctx.restore();
     }
 
-    // 2. Rastro luminoso quando está correndo
     if (obs.state === "dashing") {
       ctx.fillStyle = "rgba(250, 204, 21, 0.38)";
       ctx.beginPath();
@@ -279,12 +315,10 @@ class GameView {
       ctx.fill();
     }
 
-    // Tremor leve enquanto carrega o dash
     const shakeY = obs.state === "aiming" ? Math.sin(time * 14) * 2.5 : 0;
     const drawY = obs.y + shakeY;
     const drawCy = cy + shakeY;
 
-    // 3. Cápsula / Dardo energético laranja e amarelo
     ctx.fillStyle = obs.state === "aiming" ? "#ef4444" : "#f97316";
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 3;
@@ -293,7 +327,6 @@ class GameView {
     ctx.fill();
     ctx.stroke();
 
-    // Ponta amarela indicando a direção do disparo
     ctx.fillStyle = "#facc15";
     ctx.beginPath();
     if (dir === 1) {
@@ -308,7 +341,6 @@ class GameView {
     ctx.closePath();
     ctx.fill();
 
-    // Selo "!" durante a mira
     if (obs.state === "aiming") {
       ctx.fillStyle = "#facc15";
       ctx.strokeStyle = "#1e293b";
@@ -327,43 +359,6 @@ class GameView {
     ctx.restore();
   }
 
-  drawPuddles(puddles) {
-    const ctx = this.ctx;
-    const time = performance.now() * 0.005;
-
-    for (const p of puddles) {
-      const alpha = p.life < 45 ? p.life / 45 : 1;
-
-      ctx.save();
-      ctx.globalAlpha = alpha;
-
-      // Borda da poça d'água no gramado
-      ctx.fillStyle = "rgba(14, 165, 233, 0.45)";
-      ctx.strokeStyle = "#0284c7";
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      ctx.ellipse(p.x, p.y, p.rx, p.ry, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Brilho interno
-      ctx.fillStyle = "rgba(186, 230, 253, 0.55)";
-      ctx.beginPath();
-      ctx.ellipse(p.x - p.rx * 0.25, p.y - p.ry * 0.2, p.rx * 0.42, p.ry * 0.35, -0.2, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Ondinha animada no centro
-      const ripple = (Math.sin(time * 2 + p.x) + 1) * 0.5;
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.ellipse(p.x, p.y, p.rx * (0.25 + ripple * 0.3), p.ry * (0.25 + ripple * 0.3), 0, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.restore();
-    }
-  }
-
   drawPuddleCloud(ctx, obs, time, idx) {
     const cx = obs.x + obs.width / 2;
     const cy = obs.y + obs.height / 2;
@@ -372,13 +367,11 @@ class GameView {
 
     ctx.save();
 
-    // Sombra
     ctx.fillStyle = "rgba(15, 23, 42, 0.18)";
     ctx.beginPath();
     ctx.ellipse(cx, obs.y + obs.height + 7, obs.width * 0.4, 4.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Nuvem azul-chuvosa
     ctx.beginPath();
     ctx.arc(obs.x + 15, drawCy + 2, 13, Math.PI * 0.5, Math.PI * 1.45);
     ctx.arc(obs.x + 28, drawCy - 5, 15, Math.PI * 1.05, Math.PI * 1.95);
@@ -397,10 +390,9 @@ class GameView {
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // Gotinhas caindo embaixo da nuvem
     ctx.fillStyle = "#38bdf8";
     for (let d = -1; d <= 1; d++) {
-      const dropOffset = ((time * 8 + d * 4) % 10);
+      const dropOffset = (time * 8 + d * 4) % 10;
       ctx.beginPath();
       ctx.arc(cx + d * 12, drawCy + 14 + dropOffset, 2.5, 0, Math.PI * 2);
       ctx.fill();
@@ -422,20 +414,17 @@ class GameView {
 
     ctx.save();
 
-    // Sombra no chão
     ctx.fillStyle = "rgba(15, 23, 42, 0.25)";
     ctx.beginPath();
     ctx.ellipse(cx, obs.y + obs.height + 2, obs.width * 0.4, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Pezinhos correndo
     ctx.fillStyle = "#1e293b";
     ctx.beginPath();
     ctx.ellipse(cx - 8, cy + r - 1 + step, 6, 4, 0, 0, Math.PI * 2);
     ctx.ellipse(cx + 8, cy + r - 1 - step, 6, 4, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Corpo roxo-bandido redondo
     ctx.fillStyle = "#7c3aed";
     ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 3;
@@ -444,13 +433,11 @@ class GameView {
     ctx.fill();
     ctx.stroke();
 
-    // Máscara preta de guaxinim/ladrão nos olhos
     ctx.fillStyle = "#1e293b";
     ctx.beginPath();
     ctx.roundRect(cx - r * 0.78, cy - r * 0.34, r * 1.56, r * 0.52, 8);
     ctx.fill();
 
-    // Olhos brancos dentro da máscara
     ctx.fillStyle = "#ffffff";
     ctx.beginPath();
     ctx.arc(cx - r * 0.32, cy - r * 0.08, 4, 0, Math.PI * 2);
@@ -463,7 +450,6 @@ class GameView {
     ctx.arc(cx + r * 0.32, cy - r * 0.08, 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Alerta "!" quando assustado
     if (obs.state === "scared") {
       ctx.fillStyle = "#facc15";
       ctx.strokeStyle = "#1e293b";
@@ -480,6 +466,232 @@ class GameView {
     }
 
     ctx.restore();
+  }
+
+  drawChaserBoss(ctx, boss, time) {
+    const cx = boss.x + boss.width / 2;
+    const cy = boss.y + boss.height / 2;
+    const r = boss.width / 2 - 4;
+    const pulse = Math.sin(time * 2.2) * 3;
+
+    ctx.save();
+
+    ctx.fillStyle = "rgba(88, 28, 135, 0.22)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 9 + pulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    const grad = ctx.createRadialGradient(cx - 8, cy - 10, 6, cx, cy, r + 4);
+    grad.addColorStop(0, "#7e22ce");
+    grad.addColorStop(0.65, "#3b0764");
+    grad.addColorStop(1, "#0f172a");
+
+    ctx.fillStyle = grad;
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 3.5;
+
+    ctx.beginPath();
+    ctx.arc(cx, cy - 3, r, Math.PI, 0, false);
+    const waveY = cy + r - 3;
+    ctx.lineTo(cx + r, waveY);
+    ctx.quadraticCurveTo(cx + r * 0.65, waveY + 10 + pulse * 0.5, cx + r * 0.33, waveY);
+    ctx.quadraticCurveTo(cx, waveY + 10 - pulse * 0.5, cx - r * 0.33, waveY);
+    ctx.quadraticCurveTo(cx - r * 0.65, waveY + 10 + pulse * 0.5, cx - r, waveY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#facc15";
+    ctx.beginPath();
+    ctx.arc(cx - 11, cy - 4, 5.5, 0, Math.PI * 2);
+    ctx.arc(cx + 11, cy - 4, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#0f172a";
+    ctx.beginPath();
+    ctx.arc(cx - 11, cy - 4, 2.3, 0, Math.PI * 2);
+    ctx.arc(cx + 11, cy - 4, 2.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#facc15";
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(cx - 17, cy - 12);
+    ctx.lineTo(cx - 6, cy - 8);
+    ctx.moveTo(cx + 17, cy - 12);
+    ctx.lineTo(cx + 6, cy - 8);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  drawMegaphoneBoss(ctx, boss, time) {
+    const cx = boss.x + boss.width / 2;
+    const cy = boss.y + boss.height / 2;
+    const hover = Math.sin(time * 1.6) * 2;
+
+    ctx.save();
+
+    ctx.fillStyle = "rgba(15, 23, 42, 0.22)";
+    ctx.beginPath();
+    ctx.ellipse(cx, boss.y + boss.height + 8, boss.width * 0.42, 5.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.translate(cx, cy + hover);
+    const tilt = Math.max(-0.45, Math.min(0.45, (boss.aimAngle - Math.PI / 2) * 0.45));
+    ctx.rotate(tilt);
+
+    ctx.fillStyle = "#ef4444";
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.moveTo(-26, -10);
+    ctx.lineTo(24, -22);
+    ctx.lineTo(24, 22);
+    ctx.lineTo(-26, 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#facc15";
+    ctx.beginPath();
+    ctx.roundRect(20, -24, 10, 48, 5);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#334155";
+    ctx.beginPath();
+    ctx.roundRect(-16, 10, 10, 14, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(-4, -1, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#0f172a";
+    ctx.beginPath();
+    ctx.arc(-2.5, -1, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(-10, -8);
+    ctx.lineTo(2, -5);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  drawTornadoBoss(ctx, boss, time) {
+    const cx = boss.x + boss.width / 2;
+    const cy = boss.y + boss.height / 2;
+
+    ctx.save();
+
+    // Anéis sutis de corrente de vento puxando para o centro
+    const windPulse = (time * 18) % 36;
+    ctx.strokeStyle = "rgba(14, 165, 233, 0.25)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([12, 10]);
+    for (let ring = 0; ring < 2; ring++) {
+      const radius = 85 - windPulse + ring * 38;
+      if (radius > 28) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    ctx.setLineDash([]);
+
+    // Sombra no gramado
+    ctx.fillStyle = "rgba(15, 23, 42, 0.24)";
+    ctx.beginPath();
+    ctx.ellipse(cx, boss.y + boss.height + 6, 22, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Camadas do funil do tornado (de baixo para cima)
+    const layers = [
+      { yOff: 34, rx: 8, ry: 4.5, color: "#64748b" },
+      { yOff: 23, rx: 14, ry: 6, color: "#94a3b8" },
+      { yOff: 11, rx: 21, ry: 7.5, color: "#cbd5e1" },
+      { yOff: -2, rx: 28, ry: 9, color: "#e2e8f0" },
+      { yOff: -16, rx: 35, ry: 10.5, color: "#f8fafc" },
+      { yOff: -30, rx: 40, ry: 11, color: "#bae6fd" }
+    ];
+
+    layers.forEach((layer, idx) => {
+      const wobble = Math.sin(time * 3.5 + idx * 1.1) * (4 - idx * 0.4);
+      ctx.fillStyle = layer.color;
+      ctx.strokeStyle = "#1e293b";
+      ctx.lineWidth = 2.6;
+
+      ctx.beginPath();
+      ctx.ellipse(cx + wobble, cy + layer.yOff, layer.rx, layer.ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // Olhos bravos no topo do redemoinho
+    const topWobble = Math.sin(time * 3.5 + 4.4) * 2.2;
+    this.drawEnemyEyes(ctx, cx + topWobble, cy - 16, 11, boss.vx >= 0 ? 1.2 : -1.2);
+
+    ctx.restore();
+  }
+
+  drawProjectiles(projectiles) {
+    const ctx = this.ctx;
+
+    for (const proj of projectiles) {
+      const cx = proj.x + proj.width / 2;
+      const cy = proj.y + proj.height / 2;
+
+      ctx.save();
+
+      if (proj.type === "soundwave") {
+        ctx.translate(cx, cy);
+        ctx.rotate(proj.angle);
+
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = "round";
+
+        for (let w = -1; w <= 1; w++) {
+          ctx.beginPath();
+          ctx.arc(w * 4.5, 0, 9.5 + w * 2, -Math.PI * 0.36, Math.PI * 0.36);
+          ctx.stroke();
+        }
+      } else {
+        // Folha de caderno girando lançada pelo Tornado
+        ctx.translate(cx, cy);
+        ctx.rotate(proj.spin || 0);
+
+        ctx.fillStyle = "#fffbeb";
+        ctx.strokeStyle = "#1e293b";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.roundRect(-9, -11, 18, 22, 3);
+        ctx.fill();
+        ctx.stroke();
+
+        // Linhas azuis da folha
+        ctx.strokeStyle = "#3b82f6";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(-5, -5);
+        ctx.lineTo(5, -5);
+        ctx.moveTo(-5, 0);
+        ctx.lineTo(5, 0);
+        ctx.moveTo(-5, 5);
+        ctx.lineTo(3, 5);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
   }
 
   drawEnemyEyes(ctx, cx, eyeY, offsetX, lookDir) {
@@ -535,7 +747,6 @@ class GameView {
     ctx.roundRect(bx + 4, by + 4, bw - 8, bh - 8, 18);
     ctx.stroke();
 
-    // Faixa superior de aviso ampliada e bem legível
     const pillW = model.width - 66;
     const pillH = 38;
     const pillX = model.width / 2 - pillW / 2;
@@ -549,7 +760,6 @@ class GameView {
     ctx.fill();
     ctx.stroke();
 
-    // Texto maior com auto-ajuste caso a mensagem seja muito comprida
     let fontSize = model.isCompact ? 14.5 : 17;
     ctx.font = `800 ${fontSize}px Nunito, Segoe UI, sans-serif`;
     while (ctx.measureText(model.feedbackMessage).width > pillW - 28 && fontSize > 11.5) {
@@ -561,14 +771,12 @@ class GameView {
     ctx.textAlign = "center";
     ctx.fillText(model.feedbackMessage, model.width / 2, pillY + pillH / 2 + fontSize * 0.35);
 
-    // Letras e Slots da palavra
     for (const slot of model.slots) {
       if (slot.isSpace) continue;
 
       const letterFontSize = slot.width < 48 ? 24 : 28;
       const letterY = slot.y - 11;
 
-      // Destaque vermelho/verde atrás da letra quando verificada
       if (slot.status === "wrong" || slot.status === "correct") {
         ctx.fillStyle = slot.status === "wrong" ? "#dc2626" : "#16a34a";
         ctx.strokeStyle = "#1e293b";
@@ -665,7 +873,6 @@ class GameView {
     const img = this.images[card.letter];
     const isYellow = card.colorTheme === "yellow";
 
-    // Sombra da carta
     ctx.fillStyle =
       slotStatus === "wrong"
         ? "#991b1b"
@@ -679,20 +886,17 @@ class GameView {
     ctx.fill();
 
     if (img && img.loaded) {
-      // Fundo suave caso partes da imagem sejam transparentes
       ctx.fillStyle = isYellow ? "#fef9c3" : "#e0f2fe";
       ctx.beginPath();
       ctx.roundRect(card.x, card.y, card.width, card.height, 12);
       ctx.fill();
 
-      // Desenha o PNG em tamanho total da carta para preservar a borda feita pelo seu amigo
       ctx.save();
       ctx.beginPath();
       ctx.roundRect(card.x, card.y, card.width, card.height, 12);
       ctx.clip();
       ctx.drawImage(img, card.x, card.y, card.width, card.height);
 
-      // Filtro vermelho/verde semitransparente na hora de corrigir a palavra
       if (slotStatus === "wrong") {
         ctx.fillStyle = "rgba(220, 38, 38, 0.30)";
         ctx.fillRect(card.x, card.y, card.width, card.height);
@@ -702,7 +906,6 @@ class GameView {
       }
       ctx.restore();
 
-      // Contorno de status (Vermelho = Errada | Verde = Certa | Amarelo = Selecionada)
       if (slotStatus === "wrong" || slotStatus === "correct" || highlight) {
         ctx.strokeStyle =
           slotStatus === "wrong"
@@ -716,14 +919,12 @@ class GameView {
         ctx.stroke();
       }
 
-      // Selo ✔ ou ✖ no canto superior direito da carta verificada
       if (slotStatus === "wrong" || slotStatus === "correct") {
         this.drawCardStatusBadge(card, slotStatus === "correct");
       }
       return;
     }
 
-    // Fallback provisório caso alguma imagem falhe
     ctx.fillStyle = "#ffffff";
     ctx.strokeStyle =
       slotStatus === "wrong"

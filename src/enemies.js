@@ -2,6 +2,8 @@ class EnemyManager {
   constructor() {
     this.enemies = [];
     this.puddles = [];
+    this.projectiles = [];
+    this.activeBoss = null;
   }
 
   getArenaBounds(model) {
@@ -16,12 +18,35 @@ class EnemyManager {
     };
   }
 
+  hasActiveBoss() {
+    return this.activeBoss !== null;
+  }
+
   spawnForPhase(model) {
     this.enemies = [];
     this.puddles = [];
+    this.projectiles = [];
+    this.activeBoss = null;
+
     const bounds = this.getArenaBounds(model);
     const isHard = model.difficulty === "hard";
+    const phaseNumber = model.currentPhraseIndex + 1;
+    const bossInterval = isHard ? 3 : 5;
 
+    // Fases de Boss: 3, 6, 9... no Difícil | 5, 10, 15... no Fácil
+    if (phaseNumber % bossInterval === 0) {
+      const bossRotation = ["boss_chaser", "boss_megaphone", "boss_tornado"];
+      const bossIndex = Math.floor(phaseNumber / bossInterval - 1) % bossRotation.length;
+      const bossType = bossRotation[bossIndex];
+      const boss = this.createBoss(bossType, bounds, model.isCompact, isHard);
+
+      this.activeBoss = boss;
+      this.enemies.push(boss);
+      model.feedbackMessage = boss.alertText;
+      return;
+    }
+
+    // Inimigos comuns aleatórios
     const commonTypes = ["horizontal", "diagonal", "dash", "thief", "puddle_cloud"];
     const pickRandom = () => commonTypes[Math.floor(Math.random() * commonTypes.length)];
 
@@ -29,7 +54,6 @@ class EnemyManager {
     if (isHard) {
       const first = pickRandom();
       let second = pickRandom();
-      // Evita dois ladrões ao mesmo tempo para não poluir o baralho
       if (first === "thief" && second === "thief") {
         second = "diagonal";
       }
@@ -41,6 +65,60 @@ class EnemyManager {
     typesToSpawn.forEach((type, idx) => {
       this.enemies.push(this.createEnemy(type, idx, bounds, model.isCompact, isHard));
     });
+  }
+
+  createBoss(type, bounds, isCompact, isHard) {
+    const speedScale = isCompact ? 0.85 : 1;
+    const hardScale = isHard ? 1.15 : 1;
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const arenaH = bounds.maxY - bounds.minY;
+
+    if (type === "boss_chaser") {
+      const w = 66;
+      const h = 66;
+      return {
+        type: "boss_chaser",
+        alertText: "⚠️ CHEFE: Sombra da Ansiedade! Despiste ela (+100 pts bônus)!",
+        x: centerX - w / 2,
+        y: bounds.minY + 18,
+        width: w,
+        height: h,
+        speed: 2.55 * speedScale * hardScale
+      };
+    }
+
+    if (type === "boss_megaphone") {
+      const w = 78;
+      const h = 52;
+      return {
+        type: "boss_megaphone",
+        alertText: "⚠️ CHEFE: Megafone Gigante! Desvie das ondas (+100 pts bônus)!",
+        x: centerX - w / 2,
+        y: bounds.minY + 14,
+        width: w,
+        height: h,
+        vx: 2.1 * speedScale * hardScale,
+        shootTimer: 95,
+        aimAngle: Math.PI / 2
+      };
+    }
+
+    // Padrão: "boss_tornado" (Tornado da Confusão - Puxa o jogador e solta folhas)
+    const w = 74;
+    const h = 84;
+    return {
+      type: "boss_tornado",
+      alertText: "⚠️ CHEFE: Tornado da Confusão! Lute contra o vento (+100 pts bônus)!",
+      x: centerX - w / 2,
+      y: bounds.minY + arenaH * 0.28,
+      baseY: bounds.minY + arenaH * 0.28,
+      width: w,
+      height: h,
+      vx: 1.55 * speedScale * hardScale,
+      pullStrength: (isHard ? 1.35 : 1.1) * speedScale,
+      throwTimer: 75,
+      throwAngle: 0.4
+    };
   }
 
   createEnemy(type, idx, bounds, isCompact, isHard) {
@@ -91,7 +169,7 @@ class EnemyManager {
 
       return {
         type: "thief",
-        state: "seeking", // "seeking" | "fleeing_with_card" | "corner_idle" | "scared" | "cooldown"
+        state: "seeking",
         x: startLeft ? bounds.minX + 12 : bounds.maxX - w - 12,
         y: bounds.minY + arenaH * 0.35,
         width: w,
@@ -117,7 +195,7 @@ class EnemyManager {
         width: w,
         height: h,
         vx: 1.65 * dir * speedScale * hardScale,
-        dropTimer: 95 // Solta a primeira poça rápido para já aparecer na arena
+        dropTimer: 95
       };
     }
 
@@ -162,7 +240,7 @@ class EnemyManager {
       model.player.invulnFrames--;
     }
 
-    // Atualiza tempo de vida das poças temporárias
+    // Atualiza poças temporárias
     for (let i = this.puddles.length - 1; i >= 0; i--) {
       this.puddles[i].life--;
       if (this.puddles[i].life <= 0) {
@@ -172,6 +250,9 @@ class EnemyManager {
 
     const bounds = this.getArenaBounds(model);
     const playerLayout = model.getLayoutMetrics();
+
+    // Atualiza projéteis dos bosses
+    this.updateProjectiles(model, bounds, playerLayout);
 
     for (const enemy of this.enemies) {
       if (enemy.type === "horizontal") {
@@ -194,7 +275,164 @@ class EnemyManager {
         this.updateThief(enemy, bounds, model);
       } else if (enemy.type === "puddle_cloud") {
         this.updatePuddleCloud(enemy, bounds, model);
+      } else if (enemy.type === "boss_chaser") {
+        this.updateChaserBoss(enemy, bounds, model.player);
+        if (model.player.invulnFrames <= 0 && model.checkCollision(model.player, enemy, -5)) {
+          this.handlePlayerHit(model, enemy, playerLayout);
+        }
+      } else if (enemy.type === "boss_megaphone") {
+        this.updateMegaphoneBoss(enemy, bounds, model);
+        if (model.player.invulnFrames <= 0 && model.checkCollision(model.player, enemy, -4)) {
+          this.handlePlayerHit(model, enemy, playerLayout);
+        }
+      } else if (enemy.type === "boss_tornado") {
+        this.updateTornadoBoss(enemy, bounds, model, playerLayout);
+        if (model.player.invulnFrames <= 0 && model.checkCollision(model.player, enemy, -10)) {
+          this.handlePlayerHit(model, enemy, playerLayout);
+        }
       }
+    }
+  }
+
+  updateProjectiles(model, bounds, playerLayout) {
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const proj = this.projectiles[i];
+      proj.x += proj.vx;
+      proj.y += proj.vy;
+      if (proj.spin !== undefined) {
+        proj.spin += 0.14;
+      }
+
+      if (
+        proj.x + proj.width < bounds.minX - 10 ||
+        proj.x > bounds.maxX + 10 ||
+        proj.y > bounds.maxY + 12 ||
+        proj.y + proj.height < bounds.minY - 20
+      ) {
+        this.projectiles.splice(i, 1);
+        continue;
+      }
+
+      // Margem negativa (-3) deixa a hitbox um pouco mais justa que o desenho
+      if (model.player.invulnFrames <= 0 && model.checkCollision(model.player, proj, -3)) {
+        this.projectiles.splice(i, 1);
+        this.handlePlayerHit(model, proj, playerLayout);
+      }
+    }
+  }
+
+  updateChaserBoss(boss, bounds, player) {
+    const bCenterX = boss.x + boss.width / 2;
+    const bCenterY = boss.y + boss.height / 2;
+    const pCenterX = player.x + player.width / 2;
+    const pCenterY = player.y + player.height / 2;
+
+    const dx = pCenterX - bCenterX;
+    const dy = pCenterY - bCenterY;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 4) {
+      boss.x += (dx / dist) * boss.speed;
+      boss.y += (dy / dist) * boss.speed;
+    }
+
+    boss.x = Math.max(bounds.minX, Math.min(bounds.maxX - boss.width, boss.x));
+    boss.y = Math.max(bounds.minY, Math.min(bounds.maxY - boss.height, boss.y));
+  }
+
+  updateMegaphoneBoss(boss, bounds, model) {
+    this.updateHorizontal(boss, bounds);
+
+    const bCenterX = boss.x + boss.width / 2;
+    const bCenterY = boss.y + boss.height / 2;
+    const pCenterX = model.player.x + model.player.width / 2;
+    const pCenterY = model.player.y + model.player.height / 2;
+
+    boss.aimAngle = Math.atan2(pCenterY - bCenterY, pCenterX - bCenterX);
+
+    boss.shootTimer--;
+    if (boss.shootTimer <= 0) {
+      boss.shootTimer = model.difficulty === "hard" ? 105 : 130;
+      const projSpeed = model.isCompact ? 3.5 : 4.1;
+      const spreadAngles = [-0.28, 0, 0.28];
+
+      // Hitbox ajustada (18x18) para bater certinho com o desenho das ondas
+      const hitSize = 18;
+
+      for (const offset of spreadAngles) {
+        const angle = boss.aimAngle + offset;
+        this.projectiles.push({
+          type: "soundwave",
+          x: bCenterX - hitSize / 2,
+          y: bCenterY - hitSize / 2,
+          width: hitSize,
+          height: hitSize,
+          vx: Math.cos(angle) * projSpeed,
+          vy: Math.sin(angle) * projSpeed,
+          angle
+        });
+      }
+    }
+  }
+
+  updateTornadoBoss(boss, bounds, model, playerLayout) {
+    // Desliza devagar na horizontal com leve oscilação vertical
+    boss.x += boss.vx;
+    const minTornadoX = bounds.minX + 60;
+    const maxTornadoX = bounds.maxX - boss.width - 60;
+
+    if (boss.x <= minTornadoX) {
+      boss.x = minTornadoX;
+      boss.vx = Math.abs(boss.vx);
+    } else if (boss.x >= maxTornadoX) {
+      boss.x = maxTornadoX;
+      boss.vx = -Math.abs(boss.vx);
+    }
+    boss.y = boss.baseY + Math.sin(performance.now() * 0.0025) * 14;
+
+    const tCenterX = boss.x + boss.width / 2;
+    const tCenterY = boss.y + boss.height / 2;
+    const pCenterX = model.player.x + model.player.width / 2;
+    const pCenterY = model.player.y + model.player.height / 2;
+
+    // 1. Efeito de vento puxando o jogador suavemente em direção ao tornado
+    const dx = tCenterX - pCenterX;
+    const dy = tCenterY - pCenterY;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 14 && model.player.invulnFrames <= 0) {
+      model.player.x += (dx / dist) * boss.pullStrength;
+      model.player.y += (dy / dist) * boss.pullStrength;
+
+      model.player.x = Math.max(24, Math.min(model.width - model.player.width - 24, model.player.x));
+      model.player.y = Math.max(playerLayout.minY, Math.min(playerLayout.maxY, model.player.y));
+
+      if (model.player.carriedCard) {
+        model.player.carriedCard.x =
+          model.player.x + (model.player.width - model.player.carriedCard.width) / 2;
+        model.player.carriedCard.y = model.player.y - 38;
+      }
+    }
+
+    // 2. Arremessa folhas de caderno girando em direções alternadas
+    boss.throwTimer--;
+    if (boss.throwTimer <= 0) {
+      boss.throwTimer = model.difficulty === "hard" ? 68 : 88;
+      boss.throwAngle += 1.15;
+
+      const projSpeed = model.isCompact ? 2.7 : 3.2;
+      const size = 20;
+
+      this.projectiles.push({
+        type: "paper_swirl",
+        x: tCenterX - size / 2,
+        y: tCenterY - size / 2,
+        width: size,
+        height: size,
+        vx: Math.cos(boss.throwAngle) * projSpeed,
+        vy: Math.sin(boss.throwAngle) * projSpeed,
+        spin: 0
+      });
     }
   }
 
@@ -283,19 +521,17 @@ class EnemyManager {
     }
 
     if (enemy.state === "scared") {
-      // Corre para fora da arena pela lateral mais próxima
       const exitX = enemy.x + enemy.width / 2 < model.width / 2 ? -60 : model.width + 20;
       const dx = exitX - enemy.x;
       if (Math.abs(dx) < 10) {
         enemy.state = "cooldown";
-        enemy.cooldownTimer = 360; // Volta só depois de 6 segundos
+        enemy.cooldownTimer = 360;
       } else {
         enemy.x += Math.sign(dx) * (enemy.speed * 2.1);
       }
       return;
     }
 
-    // Se o jogador encostar no ladrão a qualquer momento, ele se assusta e solta a carta no chão
     if (model.checkCollision(model.player, enemy, 2)) {
       if (enemy.stolenCard) {
         const dropped = enemy.stolenCard;
@@ -312,7 +548,6 @@ class EnemyManager {
     }
 
     if (enemy.state === "seeking") {
-      // Escolhe uma carta livre no baralho se ainda não tem alvo válido
       if (
         !enemy.targetCard ||
         enemy.targetCard.isPlaced ||
@@ -323,7 +558,6 @@ class EnemyManager {
           (c) => !c.isPlaced && model.player.carriedCard !== c && !this.isCardStolen(c)
         );
         if (freeCards.length === 0) {
-          // Patrulha no topo esperando alguma carta ficar livre
           enemy.x += Math.sin(performance.now() * 0.003) * 1.2;
           return;
         }
@@ -366,7 +600,6 @@ class EnemyManager {
         enemy.stolenCard.y = enemy.y + enemy.height * 0.45;
       }
     } else if (enemy.state === "corner_idle") {
-      // Balança levemente no canto segurando a carta até o jogador ir buscar
       enemy.y = enemy.cornerY + Math.sin(performance.now() * 0.006) * 3;
       if (enemy.stolenCard) {
         enemy.stolenCard.x = enemy.x + (enemy.width - enemy.stolenCard.width) / 2;
@@ -382,7 +615,6 @@ class EnemyManager {
     if (enemy.dropTimer <= 0) {
       enemy.dropTimer = model.difficulty === "hard" ? 210 : 260;
 
-      // Posiciona a poça no chão da arena abaixo da nuvem
       const puddleX = Math.max(bounds.minX + 42, Math.min(bounds.maxX - 42, enemy.x + enemy.width / 2));
       const rawY = enemy.y + enemy.height + 26;
       const puddleY = Math.max(bounds.minY + 24, Math.min(bounds.maxY - 24, rawY));
@@ -392,36 +624,61 @@ class EnemyManager {
         y: puddleY,
         rx: model.isCompact ? 38 : 44,
         ry: model.isCompact ? 20 : 22,
-        life: 240, // 4 segundos a 60fps
+        life: 240,
         maxLife: 240
       });
     }
   }
 
-  handlePlayerHit(model, enemy, playerLayout) {
+  handlePlayerHit(model, hazard, playerLayout) {
     model.player.invulnFrames = 50;
 
-    const pCenterY = model.player.y + model.player.height / 2;
-    const eCenterY = enemy.y + enemy.height / 2;
-    const pushDir = pCenterY < eCenterY ? -1 : 1;
-    model.player.y = Math.max(
-      playerLayout.minY,
-      Math.min(playerLayout.maxY, model.player.y + pushDir * 30)
-    );
+    // Se encostou no Tornado, empurra o jogador para longe do centro do redemoinho
+    if (hazard.type === "boss_tornado") {
+      const pCenterX = model.player.x + model.player.width / 2;
+      const pCenterY = model.player.y + model.player.height / 2;
+      const hCenterX = hazard.x + hazard.width / 2;
+      const hCenterY = hazard.y + hazard.height / 2;
+      const dx = pCenterX - hCenterX;
+      const dy = pCenterY - hCenterY;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+
+      model.player.x = Math.max(
+        24,
+        Math.min(model.width - model.player.width - 24, model.player.x + (dx / dist) * 44)
+      );
+      model.player.y = Math.max(
+        playerLayout.minY,
+        Math.min(playerLayout.maxY, model.player.y + (dy / dist) * 44)
+      );
+    } else {
+      const pCenterY = model.player.y + model.player.height / 2;
+      const hCenterY = hazard.y + hazard.height / 2;
+      const pushDir = pCenterY < hCenterY ? -1 : 1;
+      model.player.y = Math.max(
+        playerLayout.minY,
+        Math.min(playerLayout.maxY, model.player.y + pushDir * 30)
+      );
+    }
 
     const hitNames = {
       horizontal: "nuvem de confusão",
       diagonal: "nuvem elétrica",
-      dash: "raio veloz"
+      dash: "raio veloz",
+      boss_chaser: "Sombra da Ansiedade",
+      boss_megaphone: "Megafone Gigante",
+      boss_tornado: "Tornado da Confusão",
+      soundwave: "onda sonora",
+      paper_swirl: "folha no redemoinho"
     };
-    const label = hitNames[enemy.type] || "obstáculo";
+    const label = hitNames[hazard.type] || "obstáculo";
 
     if (model.player.carriedCard) {
       model.returnCardToDeck(model.player.carriedCard);
       model.player.carriedCard = null;
-      model.feedbackMessage = `💥 Esbarrou na ${label}! A carta voltou ao baralho.`;
+      model.feedbackMessage = `💥 Atingido por ${label}! A carta voltou ao baralho.`;
     } else {
-      model.feedbackMessage = `💥 Cuidado com a ${label}!`;
+      model.feedbackMessage = `💥 Cuidado com ${label}!`;
     }
   }
 }
