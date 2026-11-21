@@ -192,7 +192,7 @@ class GameController {
       signBox.className = "alphabet-sign-box";
 
       const img = document.createElement("img");
-      img.src = `assets/imagens/${letter}.png`;
+      img.src = `assets/images/${letter}.png`;
       img.alt = `Sinal da letra ${letter} em Libras`;
 
       const fallback = document.createElement("div");

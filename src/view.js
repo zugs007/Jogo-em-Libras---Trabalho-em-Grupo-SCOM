@@ -10,10 +10,10 @@ class GameView {
     this.playerBufferCtx = this.playerBuffer.getContext("2d");
 
     this.images = {};
-    this.loadImage("player", "assets/imagens/personagem.png");
+    this.loadImage("player", "assets/images/personagem.png");
 
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((letter) => {
-      this.loadImage(letter, `assets/imagens/${letter}.png`);
+      this.loadImage(letter, `assets/images/${letter}.png`);
     });
   }
 
