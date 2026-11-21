@@ -321,10 +321,13 @@ class GameModel {
   movePlayer(keys) {
     if (this.isGameOver || this.isChecking || this.isPaused) return;
 
-    if (keys["ArrowUp"] || keys["KeyW"]) this.player.y -= this.player.speed;
-    if (keys["ArrowDown"] || keys["KeyS"]) this.player.y += this.player.speed;
-    if (keys["ArrowLeft"] || keys["KeyA"]) this.player.x -= this.player.speed;
-    if (keys["ArrowRight"] || keys["KeyD"]) this.player.x += this.player.speed;
+    const speedMult = this.enemyManager ? this.enemyManager.getPlayerSpeedMultiplier(this.player) : 1;
+    const moveStep = this.player.speed * speedMult;
+
+    if (keys["ArrowUp"] || keys["KeyW"]) this.player.y -= moveStep;
+    if (keys["ArrowDown"] || keys["KeyS"]) this.player.y += moveStep;
+    if (keys["ArrowLeft"] || keys["KeyA"]) this.player.x -= moveStep;
+    if (keys["ArrowRight"] || keys["KeyD"]) this.player.x += moveStep;
 
     const { minY, maxY } = this.getLayoutMetrics();
     this.player.x = Math.max(24, Math.min(this.width - this.player.width - 24, this.player.x));
@@ -376,7 +379,9 @@ class GameModel {
     if (this.isGameOver || this.isChecking || this.isPaused) return;
 
     if (!this.player.carriedCard) {
-      const availableCards = this.deckCards.filter((c) => !c.isPlaced);
+      const availableCards = this.deckCards.filter(
+        (c) => !c.isPlaced && !this.enemyManager.isCardStolen(c)
+      );
       const targetCard = this.getClosestColliding(availableCards, 2);
 
       if (targetCard) {

@@ -43,7 +43,10 @@ class GameView {
       : null;
 
     const highlightedCard = !model.player.carriedCard
-      ? model.getClosestColliding(model.deckCards.filter((c) => !c.isPlaced), 2)
+      ? model.getClosestColliding(
+          model.deckCards.filter((c) => !c.isPlaced && !model.enemyManager.isCardStolen(c)),
+          2
+        )
       : null;
 
     // 1. FUNDO DA ARENA
@@ -55,6 +58,7 @@ class GameView {
     ctx.fillRect(0, 0, model.width, model.height);
 
     this.drawArenaDetails(model);
+    this.drawPuddles(model.enemyManager.puddles);
 
     // 2. QUADRO SUPERIOR AZUL SURDO (Frase + Slots)
     this.drawTopBoard(model, highlightedSlot);
@@ -74,7 +78,8 @@ class GameView {
     }
 
     // 6. PERSONAGEM (com a skin selecionada)
-    this.drawPlayer(model.player, model.selectedSkin);
+    const isSlowed = model.enemyManager.getPlayerSpeedMultiplier(model.player) < 1;
+    this.drawPlayer(model.player, model.selectedSkin, isSlowed);
 
     // 7. DICA DO MODO FÁCIL EMBAIXO DA CARTA
     if (model.difficulty === "easy" && highlightedCard) {
@@ -123,6 +128,10 @@ class GameView {
         this.drawDiagonalCloud(ctx, obs, time, idx);
       } else if (obs.type === "dash") {
         this.drawDashEnemy(ctx, obs, model, time, idx);
+      } else if (obs.type === "thief") {
+        this.drawThiefEnemy(ctx, obs, time);
+      } else if (obs.type === "puddle_cloud") {
+        this.drawPuddleCloud(ctx, obs, time, idx);
       } else {
         this.drawHorizontalCloud(ctx, obs, time, idx);
       }
@@ -313,6 +322,161 @@ class GameView {
       ctx.font = "bold 12px Fredoka, Segoe UI, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("!", cx, drawY - 7);
+    }
+
+    ctx.restore();
+  }
+
+  drawPuddles(puddles) {
+    const ctx = this.ctx;
+    const time = performance.now() * 0.005;
+
+    for (const p of puddles) {
+      const alpha = p.life < 45 ? p.life / 45 : 1;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+
+      // Borda da poça d'água no gramado
+      ctx.fillStyle = "rgba(14, 165, 233, 0.45)";
+      ctx.strokeStyle = "#0284c7";
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.rx, p.ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Brilho interno
+      ctx.fillStyle = "rgba(186, 230, 253, 0.55)";
+      ctx.beginPath();
+      ctx.ellipse(p.x - p.rx * 0.25, p.y - p.ry * 0.2, p.rx * 0.42, p.ry * 0.35, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ondinha animada no centro
+      const ripple = (Math.sin(time * 2 + p.x) + 1) * 0.5;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.rx * (0.25 + ripple * 0.3), p.ry * (0.25 + ripple * 0.3), 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  }
+
+  drawPuddleCloud(ctx, obs, time, idx) {
+    const cx = obs.x + obs.width / 2;
+    const cy = obs.y + obs.height / 2;
+    const hover = Math.sin(time + idx * 2) * 2.5;
+    const drawCy = cy + hover;
+
+    ctx.save();
+
+    // Sombra
+    ctx.fillStyle = "rgba(15, 23, 42, 0.18)";
+    ctx.beginPath();
+    ctx.ellipse(cx, obs.y + obs.height + 7, obs.width * 0.4, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Nuvem azul-chuvosa
+    ctx.beginPath();
+    ctx.arc(obs.x + 15, drawCy + 2, 13, Math.PI * 0.5, Math.PI * 1.45);
+    ctx.arc(obs.x + 28, drawCy - 5, 15, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.arc(obs.x + 43, drawCy - 4, 14, Math.PI * 1.15, Math.PI * 0.15);
+    ctx.arc(obs.x + 51, drawCy + 3, 12, -Math.PI * 0.35, Math.PI * 0.5);
+    ctx.closePath();
+
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 5.5;
+    ctx.strokeStyle = "#1e293b";
+    ctx.stroke();
+
+    const grad = ctx.createLinearGradient(0, drawCy - 18, 0, drawCy + 15);
+    grad.addColorStop(0, "#7dd3fc");
+    grad.addColorStop(1, "#0284c7");
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Gotinhas caindo embaixo da nuvem
+    ctx.fillStyle = "#38bdf8";
+    for (let d = -1; d <= 1; d++) {
+      const dropOffset = ((time * 8 + d * 4) % 10);
+      ctx.beginPath();
+      ctx.arc(cx + d * 12, drawCy + 14 + dropOffset, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const lookDir = obs.vx >= 0 ? 1.1 : -1.1;
+    this.drawEnemyEyes(ctx, cx, drawCy + 2, 9, lookDir);
+
+    ctx.restore();
+  }
+
+  drawThiefEnemy(ctx, obs, time) {
+    if (obs.state === "cooldown") return;
+
+    const cx = obs.x + obs.width / 2;
+    const cy = obs.y + obs.height / 2;
+    const r = obs.width / 2 - 2;
+    const step = Math.sin(time * 3) * 3;
+
+    ctx.save();
+
+    // Sombra no chão
+    ctx.fillStyle = "rgba(15, 23, 42, 0.25)";
+    ctx.beginPath();
+    ctx.ellipse(cx, obs.y + obs.height + 2, obs.width * 0.4, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Pezinhos correndo
+    ctx.fillStyle = "#1e293b";
+    ctx.beginPath();
+    ctx.ellipse(cx - 8, cy + r - 1 + step, 6, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx + 8, cy + r - 1 - step, 6, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Corpo roxo-bandido redondo
+    ctx.fillStyle = "#7c3aed";
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Máscara preta de guaxinim/ladrão nos olhos
+    ctx.fillStyle = "#1e293b";
+    ctx.beginPath();
+    ctx.roundRect(cx - r * 0.78, cy - r * 0.34, r * 1.56, r * 0.52, 8);
+    ctx.fill();
+
+    // Olhos brancos dentro da máscara
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.32, cy - r * 0.08, 4, 0, Math.PI * 2);
+    ctx.arc(cx + r * 0.32, cy - r * 0.08, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#0f172a";
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.32, cy - r * 0.08, 2, 0, Math.PI * 2);
+    ctx.arc(cx + r * 0.32, cy - r * 0.08, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Alerta "!" quando assustado
+    if (obs.state === "scared") {
+      ctx.fillStyle = "#facc15";
+      ctx.strokeStyle = "#1e293b";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, obs.y - 10, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#dc2626";
+      ctx.font = "bold 12px Fredoka, Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("!", cx, obs.y - 6);
     }
 
     ctx.restore();
@@ -644,8 +808,29 @@ class GameView {
     ctx.fillText(`Letra: ${card.letter}`, bx + badgeW / 2, by + 16);
   }
 
-  drawPlayer(player, skinId = "default") {
+  drawPlayer(player, skinId = "default", isSlowed = false) {
     const ctx = this.ctx;
+
+    if (isSlowed) {
+      ctx.save();
+      ctx.strokeStyle = "#0284c7";
+      ctx.fillStyle = "rgba(56, 189, 248, 0.35)";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(
+        player.x + player.width / 2,
+        player.y + player.height,
+        player.width * 0.55,
+        9,
+        0,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
     const isBlinking = player.invulnFrames > 0 && Math.floor(player.invulnFrames / 5) % 2 === 0;
 
     if (isBlinking) {
