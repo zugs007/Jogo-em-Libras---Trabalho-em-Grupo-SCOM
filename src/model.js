@@ -164,6 +164,13 @@ class GameModel {
     return this.isPaused;
   }
 
+  skipPhaseForDebug() {
+    if (this.isGameOver || this.isPaused) return;
+    this.currentPhraseIndex++;
+    this.loadPhrase(this.currentPhraseIndex);
+    this.feedbackMessage = "⏭️ Fase pulada (modo teste — sem pontos).";
+  }
+
   loadPhrase(index) {
     if (index > 0 && index % this.shuffledPhrases.length === 0) {
       this.shuffledPhrases = this.shufflePhrases();

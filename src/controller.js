@@ -58,6 +58,14 @@ class GameController {
     document.getElementById("btn-resume").addEventListener("click", () => this.handleTogglePause());
     document.getElementById("btn-pause-restart").addEventListener("click", () => this.startGame());
     document.getElementById("btn-pause-home").addEventListener("click", () => this.goHome());
+    
+    const btnSkipPhase = document.getElementById("btn-skip-phase");
+    if (btnSkipPhase) {
+      btnSkipPhase.addEventListener("click", () => {
+        this.model.skipPhaseForDebug();
+        this.updateHUD();
+      });
+    }
 
     document.getElementById("btn-verify").addEventListener("click", () => {
       this.model.verifyPhrase(() => this.updateHUD());

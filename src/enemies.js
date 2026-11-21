@@ -18,21 +18,12 @@ class EnemyManager {
   spawnForPhase(model) {
     this.enemies = [];
     const bounds = this.getArenaBounds(model);
-    const phase = model.currentPhraseIndex;
     const isHard = model.difficulty === "hard";
 
-    // Rotação de combinações conforme o jogador avança nas frases
-    const easyRotation = ["horizontal", "diagonal", "dash"];
-    const hardRotation = [
-      ["horizontal", "diagonal"],
-      ["diagonal", "dash"],
-      ["horizontal", "dash"],
-      ["diagonal", "diagonal"]
-    ];
+    const commonTypes = ["horizontal", "diagonal", "dash"];
+    const pickRandom = () => commonTypes[Math.floor(Math.random() * commonTypes.length)];
 
-    const typesToSpawn = isHard
-      ? hardRotation[phase % hardRotation.length]
-      : [easyRotation[phase % easyRotation.length]];
+    const typesToSpawn = isHard ? [pickRandom(), pickRandom()] : [pickRandom()];
 
     typesToSpawn.forEach((type, idx) => {
       this.enemies.push(this.createEnemy(type, idx, bounds, model.isCompact, isHard));
