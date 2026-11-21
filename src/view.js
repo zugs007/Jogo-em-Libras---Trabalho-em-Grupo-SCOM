@@ -63,7 +63,7 @@ class GameView {
     this.drawBottomTray(model);
 
     // 4. OBSTÁCULOS MÓVEIS (Nuvens de Confusão)
-    this.drawObstacles(model.obstacles);
+    this.drawObstacles(model.enemyManager.enemies, model);
 
     // 5. CARTAS NO DECK E NOS SLOTS (com destaque vermelho/verde na verificação)
     for (const card of model.deckCards) {
@@ -112,98 +112,237 @@ class GameView {
     }
   }
 
-  drawObstacles(obstacles) {
+  drawObstacles(obstacles, model) {
     const ctx = this.ctx;
     const time = performance.now() * 0.006;
 
     for (let idx = 0; idx < obstacles.length; idx++) {
       const obs = obstacles[idx];
-      const cx = obs.x + obs.width / 2;
-      const cy = obs.y + obs.height / 2;
-      const hover = Math.sin(time + idx * 2) * 2.5;
-      const drawCy = cy + hover;
 
+      if (obs.type === "diagonal") {
+        this.drawDiagonalCloud(ctx, obs, time, idx);
+      } else if (obs.type === "dash") {
+        this.drawDashEnemy(ctx, obs, model, time, idx);
+      } else {
+        this.drawHorizontalCloud(ctx, obs, time, idx);
+      }
+    }
+  }
+
+  drawHorizontalCloud(ctx, obs, time, idx) {
+    const cx = obs.x + obs.width / 2;
+    const cy = obs.y + obs.height / 2;
+    const hover = Math.sin(time + idx * 2) * 2.5;
+    const drawCy = cy + hover;
+
+    ctx.save();
+
+    ctx.fillStyle = "rgba(15, 23, 42, 0.22)";
+    ctx.beginPath();
+    ctx.ellipse(cx, obs.y + obs.height + 7, obs.width * 0.42, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(obs.x + 15, drawCy + 2, 13, Math.PI * 0.5, Math.PI * 1.45);
+    ctx.arc(obs.x + 27, drawCy - 5, 15, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.arc(obs.x + 42, drawCy - 4, 14, Math.PI * 1.15, Math.PI * 0.15);
+    ctx.arc(obs.x + 51, drawCy + 3, 12, -Math.PI * 0.35, Math.PI * 0.5);
+    ctx.closePath();
+
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "#1e293b";
+    ctx.stroke();
+
+    const cloudGrad = ctx.createLinearGradient(0, drawCy - 18, 0, drawCy + 15);
+    cloudGrad.addColorStop(0, "#64748b");
+    cloudGrad.addColorStop(0.55, "#475569");
+    cloudGrad.addColorStop(1, "#334155");
+    ctx.fillStyle = cloudGrad;
+    ctx.fill();
+
+    const eyeY = drawCy + 3;
+    const lookDir = obs.vx >= 0 ? 1.2 : -1.2;
+    this.drawEnemyEyes(ctx, cx, eyeY, 10, lookDir);
+
+    const badgeY = drawCy - 16 + Math.cos(time * 1.4 + idx) * 1.5;
+    ctx.fillStyle = "#facc15";
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, badgeY, 8.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#1e293b";
+    ctx.font = "bold 11px Fredoka, Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("?", cx, badgeY + 4);
+
+    ctx.restore();
+  }
+
+  drawDiagonalCloud(ctx, obs, time, idx) {
+    const cx = obs.x + obs.width / 2;
+    const cy = obs.y + obs.height / 2;
+    const pulse = Math.sin(time * 2.2 + idx) * 1.5;
+
+    ctx.save();
+
+    // Sombra
+    ctx.fillStyle = "rgba(15, 23, 42, 0.22)";
+    ctx.beginPath();
+    ctx.ellipse(cx, obs.y + obs.height + 7, obs.width * 0.4, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Corpo roxo-escuro elétrico
+    ctx.beginPath();
+    ctx.arc(obs.x + 14, cy + 2, 12 + pulse * 0.4, Math.PI * 0.5, Math.PI * 1.45);
+    ctx.arc(obs.x + 28, cy - 5, 15, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.arc(obs.x + 42, cy + 2, 12 + pulse * 0.4, -Math.PI * 0.35, Math.PI * 0.5);
+    ctx.closePath();
+
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "#1e293b";
+    ctx.stroke();
+
+    const grad = ctx.createLinearGradient(0, cy - 18, 0, cy + 16);
+    grad.addColorStop(0, "#6366f1");
+    grad.addColorStop(1, "#312e81");
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Olhos
+    const lookDir = obs.vx >= 0 ? 1.3 : -1.3;
+    this.drawEnemyEyes(ctx, cx, cy + 2, 9, lookDir);
+
+    // Pequeno raio amarelo embaixo da nuvem
+    ctx.fillStyle = "#facc15";
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(cx + 2, cy + 10);
+    ctx.lineTo(cx - 5, cy + 19);
+    ctx.lineTo(cx, cy + 19);
+    ctx.lineTo(cx - 3, cy + 27);
+    ctx.lineTo(cx + 6, cy + 17);
+    ctx.lineTo(cx + 1, cy + 17);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  drawDashEnemy(ctx, obs, model, time) {
+    const cx = obs.x + obs.width / 2;
+    const cy = obs.y + obs.height / 2;
+    const dir = obs.side === "left" ? 1 : -1;
+
+    ctx.save();
+
+    // 1. Linha de aviso pontilhada vermelha antes de disparar
+    if (obs.state === "aiming") {
+      const blink = Math.floor(performance.now() / 90) % 2 === 0;
       ctx.save();
-
-      // Sombra projetada no gramado
-      ctx.fillStyle = "rgba(15, 23, 42, 0.22)";
+      ctx.strokeStyle = blink ? "rgba(220, 38, 38, 0.85)" : "rgba(250, 204, 21, 0.9)";
+      ctx.lineWidth = 3.5;
+      ctx.setLineDash([10, 8]);
       ctx.beginPath();
-      ctx.ellipse(cx, obs.y + obs.height + 7, obs.width * 0.42, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Silhueta unificada da nuvem cartoon
-      const drawCloudPath = () => {
-        ctx.beginPath();
-        ctx.arc(obs.x + 15, drawCy + 2, 13, Math.PI * 0.5, Math.PI * 1.45);
-        ctx.arc(obs.x + 27, drawCy - 5, 15, Math.PI * 1.05, Math.PI * 1.95);
-        ctx.arc(obs.x + 42, drawCy - 4, 14, Math.PI * 1.15, Math.PI * 0.15);
-        ctx.arc(obs.x + 51, drawCy + 3, 12, -Math.PI * 0.35, Math.PI * 0.5);
-        ctx.closePath();
-      };
-
-      drawCloudPath();
-      ctx.lineJoin = "round";
-      ctx.lineWidth = 6;
-      ctx.strokeStyle = "#1e293b";
+      ctx.moveTo(dir === 1 ? obs.x + obs.width : obs.x, cy);
+      ctx.lineTo(dir === 1 ? model.width - 30 : 30, cy);
       ctx.stroke();
+      ctx.restore();
+    }
 
-      const cloudGrad = ctx.createLinearGradient(0, drawCy - 18, 0, drawCy + 15);
-      cloudGrad.addColorStop(0, "#64748b");
-      cloudGrad.addColorStop(0.55, "#475569");
-      cloudGrad.addColorStop(1, "#334155");
-      ctx.fillStyle = cloudGrad;
-      ctx.fill();
-
-      ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+    // 2. Rastro luminoso quando está correndo
+    if (obs.state === "dashing") {
+      ctx.fillStyle = "rgba(250, 204, 21, 0.38)";
       ctx.beginPath();
-      ctx.ellipse(cx - 3, drawCy - 11, 16, 4.5, -0.1, 0, Math.PI * 2);
+      ctx.roundRect(
+        dir === 1 ? obs.x - 28 : obs.x,
+        obs.y + 4,
+        obs.width + 28,
+        obs.height - 8,
+        999
+      );
       ctx.fill();
+    }
 
-      // Olhinhos expressivos
-      const eyeY = drawCy + 3;
-      const leftEyeX = cx - 10;
-      const rightEyeX = cx + 10;
+    // Tremor leve enquanto carrega o dash
+    const shakeY = obs.state === "aiming" ? Math.sin(time * 14) * 2.5 : 0;
+    const drawY = obs.y + shakeY;
+    const drawCy = cy + shakeY;
 
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(leftEyeX, eyeY, 4.8, 0, Math.PI * 2);
-      ctx.arc(rightEyeX, eyeY, 4.8, 0, Math.PI * 2);
-      ctx.fill();
+    // 3. Cápsula / Dardo energético laranja e amarelo
+    ctx.fillStyle = obs.state === "aiming" ? "#ef4444" : "#f97316";
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(obs.x, drawY, obs.width, obs.height, 999);
+    ctx.fill();
+    ctx.stroke();
 
-      const lookDir = obs.vx >= 0 ? 1.2 : -1.2;
-      ctx.fillStyle = "#0f172a";
-      ctx.beginPath();
-      ctx.arc(leftEyeX + lookDir, eyeY + 0.5, 2.4, 0, Math.PI * 2);
-      ctx.arc(rightEyeX + lookDir, eyeY + 0.5, 2.4, 0, Math.PI * 2);
-      ctx.fill();
+    // Ponta amarela indicando a direção do disparo
+    ctx.fillStyle = "#facc15";
+    ctx.beginPath();
+    if (dir === 1) {
+      ctx.moveTo(obs.x + obs.width - 18, drawY + 5);
+      ctx.lineTo(obs.x + obs.width - 5, drawCy);
+      ctx.lineTo(obs.x + obs.width - 18, drawY + obs.height - 5);
+    } else {
+      ctx.moveTo(obs.x + 18, drawY + 5);
+      ctx.lineTo(obs.x + 5, drawCy);
+      ctx.lineTo(obs.x + 18, drawY + obs.height - 5);
+    }
+    ctx.closePath();
+    ctx.fill();
 
-      ctx.strokeStyle = "#0f172a";
-      ctx.lineWidth = 2.2;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(leftEyeX - 4, eyeY - 6.5);
-      ctx.lineTo(leftEyeX + 3.5, eyeY - 4);
-      ctx.moveTo(rightEyeX + 4, eyeY - 6.5);
-      ctx.lineTo(rightEyeX - 3.5, eyeY - 4);
-      ctx.stroke();
-
-      // Emblema amarelo flutuante (?)
-      const badgeY = drawCy - 16 + Math.cos(time * 1.4 + idx) * 1.5;
+    // Selo "!" durante a mira
+    if (obs.state === "aiming") {
       ctx.fillStyle = "#facc15";
       ctx.strokeStyle = "#1e293b";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(cx, badgeY, 8.5, 0, Math.PI * 2);
+      ctx.arc(cx, drawY - 11, 9, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = "#1e293b";
-      ctx.font = "bold 11px Fredoka, Segoe UI, sans-serif";
+      ctx.fillStyle = "#dc2626";
+      ctx.font = "bold 12px Fredoka, Segoe UI, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("?", cx, badgeY + 4);
-
-      ctx.restore();
+      ctx.fillText("!", cx, drawY - 7);
     }
+
+    ctx.restore();
+  }
+
+  drawEnemyEyes(ctx, cx, eyeY, offsetX, lookDir) {
+    const leftEyeX = cx - offsetX;
+    const rightEyeX = cx + offsetX;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(leftEyeX, eyeY, 4.5, 0, Math.PI * 2);
+    ctx.arc(rightEyeX, eyeY, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#0f172a";
+    ctx.beginPath();
+    ctx.arc(leftEyeX + lookDir, eyeY + 0.5, 2.3, 0, Math.PI * 2);
+    ctx.arc(rightEyeX + lookDir, eyeY + 0.5, 2.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 2.1;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(leftEyeX - 4, eyeY - 6);
+    ctx.lineTo(leftEyeX + 3.5, eyeY - 3.8);
+    ctx.moveTo(rightEyeX + 4, eyeY - 6);
+    ctx.lineTo(rightEyeX - 3.5, eyeY - 3.8);
+    ctx.stroke();
   }
 
   drawTopBoard(model, highlightedSlot) {

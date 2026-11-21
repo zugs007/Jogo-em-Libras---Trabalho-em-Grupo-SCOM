@@ -39,6 +39,7 @@ class GameModel {
 
     this.shuffledPhrases = [];
     this.alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    this.enemyManager = new EnemyManager();
     this.difficulty = "easy"; // "easy" | "hard"
     this.highScore = Number(localStorage.getItem("librasQuestHighScore")) || 0;
 
@@ -77,33 +78,11 @@ class GameModel {
       this.player.y = Math.max(minY, Math.min(maxY, centerArenaY));
     }
 
-    this.obstacles = this.createObstacles();
+    this.enemyManager.spawnForPhase(this);
 
     if (this.currentPhrase) {
       this.layoutPhraseItems(this.currentPhrase);
     }
-  }
-
-  createObstacles() {
-    if (this.isCompact) {
-      return this.difficulty === "hard"
-        ? [
-            { x: 60, y: 235, width: 64, height: 32, vx: 2.3 },
-            { x: this.width - 124, y: 395, width: 64, height: 32, vx: -2.6 }
-          ]
-        : [
-            { x: 80, y: 245, width: 64, height: 32, vx: 1.9 }
-          ];
-    }
-
-    return this.difficulty === "hard"
-      ? [
-          { x: 140, y: 228, width: 64, height: 32, vx: 2.8 },
-          { x: 700, y: 355, width: 64, height: 32, vx: -3.2 }
-        ]
-      : [
-          { x: 180, y: 240, width: 64, height: 32, vx: 2.2 }
-        ];
   }
 
   isSkinUnlocked(skinId) {
@@ -172,7 +151,7 @@ class GameModel {
       invulnFrames: 0
     };
 
-    this.obstacles = this.createObstacles();
+    this.enemyManager.spawnForPhase(this);
 
     this.slots = [];
     this.deckCards = [];
@@ -243,6 +222,7 @@ class GameModel {
     }));
 
     this.layoutPhraseItems(phrase);
+    this.enemyManager.spawnForPhase(this);
   }
 
   layoutPhraseItems(phrase) {
@@ -350,44 +330,7 @@ class GameModel {
   }
 
   updateObstacles() {
-    if (this.isGameOver || this.isChecking || this.isPaused || this.obstacles.length === 0) return;
-
-    if (this.player.invulnFrames > 0) {
-      this.player.invulnFrames--;
-    }
-
-    const minX = 32;
-    const maxX = this.width - 32;
-    const { minY, maxY } = this.getLayoutMetrics();
-
-    for (const obs of this.obstacles) {
-      obs.x += obs.vx;
-
-      if (obs.x <= minX) {
-        obs.x = minX;
-        obs.vx *= -1;
-      } else if (obs.x + obs.width >= maxX) {
-        obs.x = maxX - obs.width;
-        obs.vx *= -1;
-      }
-
-      if (this.player.invulnFrames <= 0 && this.checkCollision(this.player, obs, -3)) {
-        this.player.invulnFrames = 45;
-
-        const pCenterY = this.player.y + this.player.height / 2;
-        const oCenterY = obs.y + obs.height / 2;
-        const pushDir = pCenterY < oCenterY ? -1 : 1;
-        this.player.y = Math.max(minY, Math.min(maxY, this.player.y + pushDir * 28));
-
-        if (this.player.carriedCard) {
-          this.returnCardToDeck(this.player.carriedCard);
-          this.player.carriedCard = null;
-          this.feedbackMessage = "💥 Esbarrou na nuvem! A carta voltou ao baralho.";
-        } else {
-          this.feedbackMessage = "💥 Cuidado com as nuvens de confusão!";
-        }
-      }
-    }
+    this.enemyManager.update(this);
   }
 
   checkCollision(a, b, margin = 2) {
