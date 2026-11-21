@@ -193,7 +193,7 @@ class GameView {
     ctx.ellipse(cx, obs.y + obs.height + 7, obs.width * 0.42, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Corpo da nuvem
+    // Corpo da nuvem de tempestade
     ctx.beginPath();
     ctx.arc(obs.x + 15, drawCy + 2, 13, Math.PI * 0.5, Math.PI * 1.45);
     ctx.arc(obs.x + 27, drawCy - 5, 15, Math.PI * 1.05, Math.PI * 1.95);
@@ -213,22 +213,15 @@ class GameView {
     ctx.fillStyle = cloudGrad;
     ctx.fill();
 
-    // Brilho suave no topo da nuvem
-    ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+    // Brilho fofo no topo da nuvem
+    ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
     ctx.beginPath();
-    ctx.ellipse(cx - 2, drawCy - 11, 15, 4, -0.08, 0, Math.PI * 2);
+    ctx.ellipse(cx - 2, drawCy - 11, 16, 4.2, -0.08, 0, Math.PI * 2);
     ctx.fill();
 
-    // Olhos expressivos
-    const eyeY = drawCy + 4;
+    // Olhos expressivos centralizados
     const lookDir = obs.vx >= 0 ? 1.2 : -1.2;
-    this.drawEnemyEyes(ctx, cx, eyeY, 10, lookDir);
-
-    // '?' discreto estampado na testa da nuvem (sem bolinha flutuante)
-    ctx.fillStyle = "#fde047";
-    ctx.font = "bold 11px Fredoka, Segoe UI, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("?", cx, drawCy - 6);
+    this.drawEnemyEyes(ctx, cx, drawCy + 1, 10, lookDir);
 
     ctx.restore();
   }
@@ -289,6 +282,7 @@ class GameView {
 
     ctx.save();
 
+    // 1. Linha de aviso pontilhada antes de disparar
     if (obs.state === "aiming") {
       const blink = Math.floor(performance.now() / 90) % 2 === 0;
       ctx.save();
@@ -302,58 +296,109 @@ class GameView {
       ctx.restore();
     }
 
-    if (obs.state === "dashing") {
-      ctx.fillStyle = "rgba(250, 204, 21, 0.38)";
-      ctx.beginPath();
-      ctx.roundRect(
-        dir === 1 ? obs.x - 28 : obs.x,
-        obs.y + 4,
-        obs.width + 28,
-        obs.height - 8,
-        999
-      );
-      ctx.fill();
-    }
-
-    const shakeY = obs.state === "aiming" ? Math.sin(time * 14) * 2.5 : 0;
+    const shakeY = obs.state === "aiming" ? Math.sin(time * 16) * 2.5 : 0;
     const drawY = obs.y + shakeY;
     const drawCy = cy + shakeY;
 
-    ctx.fillStyle = obs.state === "aiming" ? "#ef4444" : "#f97316";
-    ctx.strokeStyle = "#1e293b";
-    ctx.lineWidth = 3;
+    // 2. Rastro de velocidade quando está dando o dash
+    if (obs.state === "dashing") {
+      ctx.strokeStyle = "rgba(254, 240, 138, 0.85)";
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx - dir * 24, drawCy - 7);
+      ctx.lineTo(cx - dir * 56, drawCy - 7);
+      ctx.moveTo(cx - dir * 20, drawCy);
+      ctx.lineTo(cx - dir * 64, drawCy);
+      ctx.moveTo(cx - dir * 24, drawCy + 7);
+      ctx.lineTo(cx - dir * 56, drawCy + 7);
+      ctx.stroke();
+    }
+
+    // 3. Corpo em formato de Raio / Dardo Elétrico (espelhado conforme a direção)
+    ctx.save();
+    ctx.translate(cx, drawCy);
+    ctx.scale(dir, 1);
+
     ctx.beginPath();
-    ctx.roundRect(obs.x, drawY, obs.width, obs.height, 999);
+    ctx.moveTo(27, 0);      // Ponta frontal afiada
+    ctx.lineTo(3, -14);     // Asa superior
+    ctx.lineTo(6, -6);      // Entalhe interno
+    ctx.lineTo(-13, -12);   // Ponta elétrica traseira superior
+    ctx.lineTo(-9, -4);
+    ctx.lineTo(-26, -7);    // Cauda zigue-zague cima
+    ctx.lineTo(-19, 0);     // Centro da cauda
+    ctx.lineTo(-26, 7);     // Cauda zigue-zague baixo
+    ctx.lineTo(-9, 4);
+    ctx.lineTo(-13, 12);    // Ponta elétrica traseira inferior
+    ctx.lineTo(6, 6);
+    ctx.lineTo(3, 14);      // Asa inferior
+    ctx.closePath();
+
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 3.2;
+    ctx.strokeStyle = "#1e293b";
+
+    const boltGrad = ctx.createLinearGradient(-24, 0, 26, 0);
+    if (obs.state === "aiming") {
+      boltGrad.addColorStop(0, "#ef4444");
+      boltGrad.addColorStop(0.6, "#f97316");
+      boltGrad.addColorStop(1, "#fde047");
+    } else {
+      boltGrad.addColorStop(0, "#f59e0b");
+      boltGrad.addColorStop(0.55, "#facc15");
+      boltGrad.addColorStop(1, "#fef08a");
+    }
+    ctx.fillStyle = boltGrad;
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "#facc15";
+    // Brilho interno no centro do raio
+    ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
     ctx.beginPath();
-    if (dir === 1) {
-      ctx.moveTo(obs.x + obs.width - 18, drawY + 5);
-      ctx.lineTo(obs.x + obs.width - 5, drawCy);
-      ctx.lineTo(obs.x + obs.width - 18, drawY + obs.height - 5);
-    } else {
-      ctx.moveTo(obs.x + 18, drawY + 5);
-      ctx.lineTo(obs.x + 5, drawCy);
-      ctx.lineTo(obs.x + 18, drawY + obs.height - 5);
-    }
+    ctx.moveTo(18, 0);
+    ctx.lineTo(-2, -5);
+    ctx.lineTo(-12, 0);
+    ctx.lineTo(-2, 5);
     ctx.closePath();
     ctx.fill();
 
+    // Olho determinado na lateral
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(8, 0, 4.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#0f172a";
+    ctx.beginPath();
+    ctx.arc(9.5, 0, 2.1, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sobrancelha brava inclinada para a ponta
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(4, -5.5);
+    ctx.lineTo(12, -3);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // 4. Selo "!" acima do raio durante a mira
     if (obs.state === "aiming") {
       ctx.fillStyle = "#facc15";
       ctx.strokeStyle = "#1e293b";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(cx, drawY - 11, 9, 0, Math.PI * 2);
+      ctx.arc(cx, drawY - 12, 9, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = "#dc2626";
       ctx.font = "bold 12px Fredoka, Segoe UI, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("!", cx, drawY - 7);
+      ctx.fillText("!", cx, drawY - 8);
     }
 
     ctx.restore();
