@@ -76,6 +76,7 @@
       <div class="hud-pill pill-blue">📚 Frase <strong id="hud-level">1</strong></div>
       <div class="hud-pill pill-mode" id="hud-mode">🟢 Fácil</div>
       <div class="hud-pill pill-green">🏆 Recorde: <strong id="hud-highscore">0</strong></div>
+      <button id="btn-mute" type="button" class="hud-pill pill-mode" style="cursor: pointer;">🔊 Som</button>
     </header>
 
     <main class="canvas-wrapper">
@@ -198,6 +199,7 @@
   </div>
 
   <!-- Scripts na ordem MVC: Model -> View -> Controller -->
+  <script src="src/audio.js"></script>
   <script src="src/enemies.js"></script>
   <script src="src/model.js"></script>
   <script src="src/view.js"></script>

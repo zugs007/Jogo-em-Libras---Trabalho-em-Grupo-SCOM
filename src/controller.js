@@ -39,6 +39,36 @@ class GameController {
   }
 
   bindEvents() {
+    // Tenta tocar a música do lobby imediatamente ao abrir e garante no 1º toque/clique
+    if (this.model.sound) {
+      this.model.sound.playMusic("hub");
+    }
+
+    const unlockEvents = ["pointerdown", "touchstart", "keydown", "click"];
+    const unlockHubAudio = () => {
+      if (!this.model.sound) return;
+
+      if (!document.getElementById("screen-start").classList.contains("active")) {
+        unlockEvents.forEach((evt) => document.removeEventListener(evt, unlockHubAudio));
+        return;
+      }
+
+      this.model.sound.unlockAudioContext();
+      this.model.sound.playMusic("hub", () => {
+        unlockEvents.forEach((evt) => document.removeEventListener(evt, unlockHubAudio));
+      });
+    };
+    unlockEvents.forEach((evt) => document.addEventListener(evt, unlockHubAudio));
+
+    const btnMute = document.getElementById("btn-mute");
+    if (btnMute) {
+      btnMute.addEventListener("click", () => {
+        if (!this.model.sound) return;
+        const muted = this.model.sound.toggleMute();
+        btnMute.textContent = muted ? "🔇 Mudo" : "🔊 Som";
+      });
+    }
+
     const modeButtons = document.querySelectorAll(".mode-btn");
     modeButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -58,7 +88,8 @@ class GameController {
     document.getElementById("btn-resume").addEventListener("click", () => this.handleTogglePause());
     document.getElementById("btn-pause-restart").addEventListener("click", () => this.startGame());
     document.getElementById("btn-pause-home").addEventListener("click", () => this.goHome());
-    
+
+    // Botão temporário de teste para pular fases
     const btnSkipPhase = document.getElementById("btn-skip-phase");
     if (btnSkipPhase) {
       btnSkipPhase.addEventListener("click", () => {
@@ -354,11 +385,13 @@ class GameController {
       overlay.classList.remove("hidden");
       btnPause.textContent = "▶ Continuar";
       btnVerify.disabled = true;
+      if (this.model.sound) this.model.sound.pauseMusic();
       this.view.render(this.model);
     } else {
       overlay.classList.add("hidden");
       btnPause.textContent = "⏸️ Pausar";
       btnVerify.disabled = false;
+      if (this.model.sound) this.model.sound.resumeMusic();
     }
   }
 
@@ -379,6 +412,10 @@ class GameController {
     clearInterval(this.timerInterval);
     cancelAnimationFrame(this.animationFrameId);
     this.syncPauseUI();
+    if (this.model.sound) {
+      this.model.sound.stopAllSfx();
+      this.model.sound.playMusic("hub");
+    }
     this.updateHUD();
     this.renderSkinsMenu();
     this.switchScreen("screen-start");
@@ -386,7 +423,12 @@ class GameController {
 
   startGame() {
     this.applyResponsiveCanvas();
+    if (this.model.sound) {
+      this.model.sound.unlockAudioContext();
+      this.model.sound.stopAllSfx();
+    }
     this.model.resetGame();
+    if (this.model.updateGameplayMusic) this.model.updateGameplayMusic();
     this.syncPauseUI();
     this.updateHUD();
     this.switchScreen("screen-game");
@@ -424,6 +466,10 @@ class GameController {
     this.syncPauseUI();
     clearInterval(this.timerInterval);
     cancelAnimationFrame(this.animationFrameId);
+    if (this.model.sound) {
+      this.model.sound.stopAllSfx();
+      this.model.sound.playMusic("hub");
+    }
 
     const newlyUnlocked = this.model.skins.filter(
       (s) => s.unlockScore > this.model.runStartHighScore && this.model.highScore >= s.unlockScore

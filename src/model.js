@@ -40,6 +40,7 @@ class GameModel {
     this.shuffledPhrases = [];
     this.alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     this.enemyManager = new EnemyManager();
+    this.sound = new SoundManager();
     this.difficulty = "easy"; // "easy" | "hard"
     this.highScore = Number(localStorage.getItem("librasQuestHighScore")) || 0;
 
@@ -158,6 +159,15 @@ class GameModel {
     this.loadPhrase(this.currentPhraseIndex);
   }
 
+  updateGameplayMusic() {
+    if (!this.sound || this.isGameOver) return;
+    if (this.enemyManager && this.enemyManager.hasActiveBoss()) {
+      this.sound.playMusic(this.enemyManager.activeBoss.type);
+    } else {
+      this.sound.playMusic(this.difficulty === "hard" ? "hard" : "easy");
+    }
+  }
+
   togglePause() {
     if (this.isGameOver || this.isChecking) return this.isPaused;
     this.isPaused = !this.isPaused;
@@ -232,6 +242,7 @@ class GameModel {
 
     this.layoutPhraseItems(phrase);
     this.enemyManager.spawnForPhase(this);
+    this.updateGameplayMusic();
   }
 
   layoutPhraseItems(phrase) {
@@ -388,6 +399,7 @@ class GameModel {
 
       if (targetCard) {
         this.player.carriedCard = targetCard;
+        this.sound.playSfx("pickCard");
         this.feedbackMessage = "Leve a carta até o espaço abaixo da letra e solte!";
         return;
       }
@@ -420,6 +432,7 @@ class GameModel {
         targetSlot.placedCard = card;
         targetSlot.status = "filled";
         this.player.carriedCard = null;
+        if (this.sound) this.sound.playSfx("placeCard");
         this.feedbackMessage = "Carta encaixada! Complete a frase e clique em Verificar.";
         return;
       }
@@ -442,6 +455,7 @@ class GameModel {
     }
 
     this.isChecking = true;
+    this.sound.playSfx("verify");
     let correctCount = 0;
 
     for (const slot of letterSlots) {

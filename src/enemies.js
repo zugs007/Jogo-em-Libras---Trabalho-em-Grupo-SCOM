@@ -23,6 +23,11 @@ class EnemyManager {
   }
 
   spawnForPhase(model) {
+    // Interrompe efeitos longos da fase anterior (ex: vento do Tornado)
+    if (model.sound) {
+      model.sound.stopAllSfx();
+    }
+
     this.enemies = [];
     this.puddles = [];
     this.projectiles = [];
@@ -266,7 +271,7 @@ class EnemyManager {
           this.handlePlayerHit(model, enemy, playerLayout);
         }
       } else if (enemy.type === "dash") {
-        this.updateDash(enemy, bounds, model.player);
+        this.updateDash(enemy, bounds, model);
         const canHit = enemy.state === "dashing";
         if (canHit && model.player.invulnFrames <= 0 && model.checkCollision(model.player, enemy, -3)) {
           this.handlePlayerHit(model, enemy, playerLayout);
@@ -352,6 +357,8 @@ class EnemyManager {
 
     boss.shootTimer--;
     if (boss.shootTimer <= 0) {
+      if (model.sound) model.sound.playSfx("megaphoneShoot");
+
       boss.shootTimer = model.difficulty === "hard" ? 105 : 130;
       const projSpeed = model.isCompact ? 3.5 : 4.1;
       const spreadAngles = [-0.28, 0, 0.28];
@@ -417,6 +424,8 @@ class EnemyManager {
     // 2. Arremessa folhas de caderno girando em direções alternadas
     boss.throwTimer--;
     if (boss.throwTimer <= 0) {
+      if (model.sound) model.sound.playSfx("tornado");
+
       boss.throwTimer = model.difficulty === "hard" ? 68 : 88;
       boss.throwAngle += 1.15;
 
@@ -468,7 +477,9 @@ class EnemyManager {
     }
   }
 
-  updateDash(enemy, bounds, player) {
+  updateDash(enemy, bounds, model) {
+    const player = model.player;
+
     if (enemy.state === "patrol") {
       enemy.y += enemy.vy;
       if (enemy.y <= bounds.minY) {
@@ -490,6 +501,7 @@ class EnemyManager {
       enemy.timer--;
       if (enemy.timer <= 0) {
         enemy.state = "dashing";
+        if (model.sound) model.sound.playSfx("dash");
       }
     } else if (enemy.state === "dashing") {
       const dir = enemy.side === "left" ? 1 : -1;
@@ -576,6 +588,7 @@ class EnemyManager {
         enemy.state = "fleeing_with_card";
         enemy.cornerX = enemy.x < model.width / 2 ? bounds.maxX - enemy.width - 18 : bounds.minX + 18;
         enemy.cornerY = bounds.minY + 14;
+        if (model.sound) model.sound.playSfx("pickCard");
         model.feedbackMessage = "🦝 Um ladrão pegou uma carta! Encoste nele para recuperar!";
       } else {
         enemy.x += (dx / dist) * enemy.speed;
