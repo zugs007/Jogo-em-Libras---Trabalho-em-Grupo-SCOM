@@ -175,11 +175,11 @@ class GameModel {
   }
 
   skipPhaseForDebug() {
-    if (this.isGameOver || this.isPaused) return;
+    if (this.isGameOver || this.isPaused || this.isChecking) return;
     this.currentPhraseIndex++;
     this.loadPhrase(this.currentPhraseIndex);
     if (!this.enemyManager.hasActiveBoss()) {
-      this.feedbackMessage = "⏭️ Fase pulada (modo teste — sem pontos).";
+      this.feedbackMessage = "⏭️ Fase pulada — sem pontos nesta rodada.";
     }
   }
 
