@@ -6,7 +6,6 @@ class SoundManager {
     this.sfxVolume = 0.65;
 
     this.currentMusicKey = null;
-    this.currentMusicAudio = null;
     this.desiredMusicKey = null;
     this.pendingMusicKey = null;
     this.isAudioUnlocked = false;
@@ -24,6 +23,8 @@ class SoundManager {
     // Efeitos sonoros (SFX)
     this.sfxFiles = {
       dash: "Dash seta.wav",
+      dashAlert: "Som alerta dash.wav",
+      damage: "Som dano.wav",
       pickCard: "Pega carta.wav",
       megaphoneShoot: "Tiro megafone.mp4",
       tornado: "Tornado.flac",
@@ -33,6 +34,8 @@ class SoundManager {
     // Ajuste individual de volume por efeito
     this.sfxVolumeScale = {
       dash: 0.85,
+      dashAlert: 0.85,
+      damage: 0.9,
       pickCard: 0.9,
       placeCard: 0.9,
       megaphoneShoot: 0.85,
@@ -40,7 +43,19 @@ class SoundManager {
       verify: 0.9
     };
 
-    this.musicCache = {};
+    // Player único <video playsinline> oculto: garante compatibilidade com .mp4, .mp3 e .wav
+    // no iOS/Android e mantém o desbloqueio de áudio ao trocar de música entre fases
+    this.bgmPlayer = document.createElement("video");
+    this.bgmPlayer.playsInline = true;
+    this.bgmPlayer.setAttribute("playsinline", "");
+    this.bgmPlayer.setAttribute("webkit-playsinline", "");
+    this.bgmPlayer.loop = true;
+    this.bgmPlayer.preload = "auto";
+    this.bgmPlayer.style.display = "none";
+    if (document.body) {
+      document.body.appendChild(this.bgmPlayer);
+    }
+
     this.sfxBuffers = {};
     this.sfxFallbackCache = {};
     this.activeSfx = new Set();
@@ -85,16 +100,6 @@ class SoundManager {
   }
 
   preloadAll() {
-    // Pré-carrega músicas de fundo
-    for (const [key, filename] of Object.entries(this.musicFiles)) {
-      const audio = new Audio(encodeURI(this.basePath + filename));
-      audio.loop = true;
-      audio.preload = "auto";
-      audio.volume = this.musicVolume;
-      audio.load();
-      this.musicCache[key] = audio;
-    }
-
     // Pré-carrega efeitos sonoros na memória (Web Audio API)
     for (const [key, filename] of Object.entries(this.sfxFiles)) {
       const url = encodeURI(this.basePath + filename);
@@ -112,7 +117,6 @@ class SoundManager {
           .then((buf) => this.audioCtx.decodeAudioData(buf))
           .then((decoded) => {
             this.sfxBuffers[key] = decoded;
-            // Cria automaticamente a versão invertida para quando encaixar a carta
             if (key === "pickCard") {
               this.sfxBuffers["placeCard"] = this.createReversedBuffer(decoded);
             }
@@ -124,32 +128,36 @@ class SoundManager {
 
   playMusic(key) {
     this.desiredMusicKey = key;
-    const nextAudio = this.musicCache[key];
-    if (!nextAudio || this.isMuted) return;
+    const filename = this.musicFiles[key];
+    if (!filename || this.isMuted) return;
 
+    const targetUrl = new URL(encodeURI(this.basePath + filename), window.location.href).href;
+
+    // Já está tocando essa mesma faixa
     if (
       this.currentMusicKey === key &&
-      this.currentMusicAudio === nextAudio &&
-      !nextAudio.paused
+      this.bgmPlayer.src === targetUrl &&
+      !this.bgmPlayer.paused
     ) {
       return;
     }
 
-    if (this.pendingMusicKey === key) {
+    if (this.pendingMusicKey === key && this.bgmPlayer.src === targetUrl) {
       return;
     }
 
-    if (this.currentMusicAudio && this.currentMusicAudio !== nextAudio) {
-      this.currentMusicAudio.pause();
-      this.currentMusicAudio.currentTime = 0;
+    if (this.bgmPlayer.src !== targetUrl) {
+      this.bgmPlayer.pause();
+      this.bgmPlayer.src = targetUrl;
+      this.bgmPlayer.load();
     }
 
     this.currentMusicKey = key;
-    this.currentMusicAudio = nextAudio;
     this.pendingMusicKey = key;
-    nextAudio.volume = this.musicVolume;
+    this.bgmPlayer.loop = true;
+    this.bgmPlayer.volume = this.musicVolume;
 
-    const playPromise = nextAudio.play();
+    const playPromise = this.bgmPlayer.play();
     if (playPromise && typeof playPromise.then === "function") {
       playPromise
         .then(() => {
@@ -174,8 +182,8 @@ class SoundManager {
 
   pauseMusic() {
     this.pendingMusicKey = null;
-    if (this.currentMusicAudio && !this.currentMusicAudio.paused) {
-      this.currentMusicAudio.pause();
+    if (!this.bgmPlayer.paused) {
+      this.bgmPlayer.pause();
     }
     this.stopAllSfx();
   }
@@ -189,12 +197,9 @@ class SoundManager {
 
   stopMusic() {
     this.pendingMusicKey = null;
-    if (this.currentMusicAudio) {
-      this.currentMusicAudio.pause();
-      this.currentMusicAudio.currentTime = 0;
-    }
+    this.bgmPlayer.pause();
+    this.bgmPlayer.currentTime = 0;
     this.currentMusicKey = null;
-    this.currentMusicAudio = null;
   }
 
   stopAllSfx() {

@@ -83,7 +83,7 @@ class GameView {
     this.drawPlayer(model.player, model.selectedSkin, isSlowed);
 
     // 7. DICA DO MODO FÁCIL EMBAIXO DA CARTA
-    if (model.difficulty === "easy" && highlightedCard) {
+    if (highlightedCard) {
       this.drawCardLetterHint(highlightedCard);
     }
 

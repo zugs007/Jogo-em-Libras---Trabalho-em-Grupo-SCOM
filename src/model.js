@@ -26,15 +26,15 @@ class GameModel {
     // Catálogo de Skins (Base + 9 Professores = 10 cards, 5 por fileira)
     this.skins = [
       { id: "default", name: "Padrão", unlockScore: 0 },
-      { id: "prof1", name: '"parsec"', unlockScore: 200 },
-      { id: "prof2", name: '"skywalker"', unlockScore: 450 },
-      { id: "prof3", name: '"eurística"', unlockScore: 700 },
-      { id: "prof4", name: '"já fizeram?"', unlockScore: 1000 },
-      { id: "prof5", name: '"cachaça"', unlockScore: 1350 },
-      { id: "prof6", name: '"capacitivo"', unlockScore: 1750 },
-      { id: "prof8", name: '"bonequinho"', unlockScore: 2200 },
-      { id: "prof7", name: '"matlab"', unlockScore: 2700 },
-      { id: "prof9", name: '"boss final"', unlockScore: 3300 }
+      { id: "prof1", name: '"Parsec"', unlockScore: 200 },
+      { id: "prof2", name: '"Skywalker"', unlockScore: 450 },
+      { id: "prof3", name: '"Eurística"', unlockScore: 700 },
+      { id: "prof4", name: '"Já Fizeram?"', unlockScore: 1000 },
+      { id: "prof5", name: '"Cachaça"', unlockScore: 1350 },
+      { id: "prof6", name: '"Capacitibo"', unlockScore: 1750 },
+      { id: "prof8", name: '"Bonequinho"', unlockScore: 2200 },
+      { id: "prof7", name: '"Pai de Meninas"', unlockScore: 2700 },
+      { id: "prof9", name: '"Boss Final"', unlockScore: 3300 }
     ];
 
     this.shuffledPhrases = [];

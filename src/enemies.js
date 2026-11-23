@@ -496,6 +496,7 @@ class EnemyManager {
         enemy.y = Math.max(bounds.minY, Math.min(bounds.maxY - enemy.height, targetY));
         enemy.state = "aiming";
         enemy.timer = 70;
+        if (model.sound) model.sound.playSfx("dashAlert");
       }
     } else if (enemy.state === "aiming") {
       enemy.timer--;
@@ -645,6 +646,7 @@ class EnemyManager {
 
   handlePlayerHit(model, hazard, playerLayout) {
     model.player.invulnFrames = 50;
+    if (model.sound) model.sound.playSfx("damage");
 
     // Se encostou no Tornado, empurra o jogador para longe do centro do redemoinho
     if (hazard.type === "boss_tornado") {
